@@ -1,0 +1,28 @@
+[
+  {
+    "number": 1,
+    "date": "09/29",
+    "title": "인공지능 기초",
+    "url": "https://colab.research.google.com/drive/1MqDW_P5YFAHALbr2-bZf3bdgts49LEu-?usp=sharing"
+  },
+  {
+    "number": 2,
+    "date": "09/28",
+    "title": "CNN 기초 이론 및 예제",
+    "url": "https://colab.research.google.com/drive/1XC_o5yOQFKuIBovD1-dwIrjZ9rOCH1y5"
+  }
+  ,
+{
+    "number": 3,
+    "date": "10/14",
+    "title": "hugging face : chatbot - 응용 : 저장편",
+    "url": "https://colab.research.google.com/drive/1Mz8HE4ygy3EGZwIz0bEJG4LA6_4hzkSz?usp=sharing"
+  }
+,
+{
+    "number": 4,
+    "date": "10/14",
+    "title": "CNN 기초 이론 및 예제",
+    "url": "https://colab.research.google.com/drive/19baCdHZy2E5hocMVLk3teiEO_gSQFgTz?usp=sharing"
+  }
+]
