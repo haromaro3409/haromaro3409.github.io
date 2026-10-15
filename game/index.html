@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리들의 게임 모음</title>
+<style>
+:root{--bg:#f5f7fb;--text:#202938;--muted:#697586;--line:#e5eaf1;--accent:#5267e8;--soft:#eef0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+header{padding:40px 18px 30px;text-align:center;background:linear-gradient(135deg,#5267e8,#8b5cf6);color:white}
+h1{margin:0 0 8px;font-size:clamp(26px,4vw,38px)}header p{margin:0;color:#eef0ff}
+main{width:min(1000px,calc(100% - 28px));margin:26px auto 45px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+input{flex:1;min-width:220px;max-width:440px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:white}
+.count{font-size:14px;color:var(--muted)}
+.table-wrap{overflow-x:auto;background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px #1f29370a}
+table{width:100%;min-width:560px;border-collapse:collapse}
+th,td{padding:15px 18px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:#f8f9fc;color:var(--muted);font-size:13px}
+th:first-child,td:first-child{text-align:center;width:75px}
+tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#fafbff}
+.name{font-weight:700}.nickname{color:var(--muted)}
+a.play{display:inline-block;text-decoration:none;background:var(--soft);color:var(--accent);padding:8px 12px;border-radius:9px;font-size:13px;font-weight:700;white-space:nowrap}
+a.play:hover{background:var(--accent);color:white}
+#message{display:none;padding:28px;text-align:center;color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
+@media(max-width:600px){header{padding:30px 14px}main{width:calc(100% - 20px)}th,td{padding:12px}}
+</style>
+</head>
+<body>
+<header><h1>🎮 아이들의 게임 모음</h1><p>직접 만든 게임을 찾아서 플레이해 보세요!</p></header>
+<main>
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="게임 이름 또는 닉네임 검색" aria-label="게임 검색">
+    <span class="count" id="count">게임 불러오는 중...</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>순번</th><th>게임 이름</th><th>닉네임</th><th>링크 접속</th></tr></thead>
+      <tbody id="game-list"></tbody>
+    </table>
+    <div id="message">게임 목록을 불러오지 못했습니다. games.json 파일이 있는지 확인해 주세요.</div>
+  </div>
+  <footer>게임 목록은 games.json 파일에서 관리합니다.</footer>
+</main>
+<script>
+const list = document.getElementById("game-list");
+const search = document.getElementById("search");
+const count = document.getElementById("count");
+const message = document.getElementById("message");
+let games = [];
+
+function renderGames(){
+  const keyword = search.value.trim().toLocaleLowerCase();
+  const filtered = games.filter(g =>
+    String(g.name || "").toLocaleLowerCase().includes(keyword) ||
+    String(g.nickname || "").toLocaleLowerCase().includes(keyword)
+  );
+  list.replaceChildren();
+  filtered.forEach((game, index) => {
+    const row = document.createElement("tr");
+    const number = document.createElement("td");
+    number.textContent = index + 1;
+    const name = document.createElement("td");
+    name.className = "name";
+    name.textContent = game.name || "이름 없음";
+    const nickname = document.createElement("td");
+    nickname.className = "nickname";
+    nickname.textContent = game.nickname || "-";
+    const linkCell = document.createElement("td");
+    const link = document.createElement("a");
+    link.className = "play";
+    link.textContent = "게임 실행 ↗";
+    link.href = "game/" + String(game.file || "").split("/").map(encodeURIComponent).join("/");
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    linkCell.appendChild(link);
+    row.append(number, name, nickname, linkCell);
+    list.appendChild(row);
+  });
+  count.textContent = `게임 ${filtered.length}개`;
+  message.style.display = filtered.length ? "none" : "block";
+  if (!games.length) message.textContent = "등록된 게임이 없습니다.";
+}
+search.addEventListener("input", renderGames);
+
+fetch("games.json")
+  .then(response => {
+    if (!response.ok) throw new Error("games.json을 불러올 수 없습니다.");
+    return response.json();
+  })
+  .then(data => {
+    if (!Array.isArray(data)) throw new Error("games.json 형식이 올바르지 않습니다.");
+    games = data;
+    renderGames();
+  })
+  .catch(() => {
+    count.textContent = "목록 로드 실패";
+    message.textContent = "게임 목록을 불러오지 못했습니다. index.html과 같은 위치에 games.json 파일을 올렸는지 확인해 주세요.";
+    message.style.display = "block";
+  });
+</script>
+</body>
+</html>
