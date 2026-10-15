@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보물 대작전 - Shadow Heist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            overflow: hidden;
+            user-select: none;
+        }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+        }
+        .glass-button {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-button:hover:not(:disabled) {
+            background: rgba(51, 65, 85, 0.95);
+            border-color: #06b6d4;
+            box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+            transform: translateY(-2px);
+        }
+        .glass-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .canvas-glow {
+            box-shadow: 0 0 35px rgba(6, 182, 212, 0.18);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center p-2 relative bg-slate-950">
+
+    <!-- Header HUD -->
+    <header class="w-full max-w-5xl flex justify-between items-center mb-2 px-3 z-20">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">🥷</span>
+            <div>
+                <h1 class="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 font-orbitron">SHADOW HEIST</h1>
+                <p class="text-xs text-cyan-400/80 font-bold tracking-widest">보물 대작전</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-5 glass-panel px-4 py-2 rounded-xl border border-slate-700/60">
+            <div class="text-center">
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">스테이지</span>
+                <span id="ui-stage" class="text-sm font-extrabold text-cyan-400 font-orbitron">STAGE 1</span>
+            </div>
+            <div class="h-6 w-px bg-slate-700"></div>
+            <div class="text-center">
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">잔여 보물</span>
+                <span id="ui-treasure" class="text-sm font-extrabold text-teal-300 font-orbitron">0 / 0</span>
+            </div>
+            <div class="h-6 w-px bg-slate-700"></div>
+            <div class="text-center">
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">생명</span>
+                <span id="ui-lives" class="text-sm font-bold text-red-400">❤️❤️❤️</span>
+            </div>
+            <div class="h-6 w-px bg-slate-700"></div>
+            <div class="text-center">
+                <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">보유 골드</span>
+                <span id="ui-gold" class="text-sm font-extrabold text-amber-400 font-orbitron">0 G</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Viewport -->
+    <div class="relative w-full max-w-5xl flex flex-col items-center z-20">
+        <div class="relative rounded-2xl overflow-hidden border border-slate-800 canvas-glow bg-slate-900">
+            <canvas id="gameCanvas" width="960" height="540" class="block cursor-crosshair"></canvas>
+
+            <!-- Status Indicator Overlay -->
+            <div class="absolute top-4 left-4 z-20 flex gap-2">
+                <div id="status-stealth" class="hidden glass-panel px-3 py-1.5 rounded-lg border border-cyan-500/50 text-xs font-bold text-cyan-300 flex items-center gap-1.5 animate-pulse">
+                    <span>👻</span> 은신 활성화 중!
+                </div>
+            </div>
+
+            <!-- Full Screen Modal Overlay -->
+            <div id="modal-overlay" class="absolute inset-0 z-30 glass-panel flex flex-col items-center justify-center p-8 text-center bg-slate-950/90">
+                <div class="max-w-md w-full flex flex-col items-center">
+                    <div id="modal-icon" class="text-6xl mb-3 animate-bounce">💎</div>
+                    <h2 id="modal-title" class="text-3xl font-black font-orbitron text-cyan-400 mb-2 tracking-wide">보물 대작전</h2>
+                    <p id="modal-desc" class="text-slate-300 text-sm mb-6 leading-relaxed font-medium">
+                        경찰의 시야를 피해 스테이지 내부의 모든 보물을 수집하세요!<br>
+                        막히거나 갇히는 구간 없이 연결된 맵에서 특수 아이템을 활용하여 탈출하세요.
+                    </p>
+                    <button id="btn-modal-action" class="w-full py-3.5 px-6 rounded-xl font-bold font-orbitron text-slate-950 bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 shadow-lg shadow-cyan-500/30 transition transform active:scale-95">
+                        게임 시작
+                    </button>
+                    <div class="mt-6 text-xs text-slate-400 border-t border-slate-800/80 pt-4 w-full grid grid-cols-2 gap-2 text-left">
+                        <div><b class="text-slate-200">WASD / 방향키:</b> 이동</div>
+                        <div><b class="text-slate-200">1:</b> 신발 (+이동속도)</div>
+                        <div><b class="text-slate-200">2:</b> 연막탄 (경찰 마비)</div>
+                        <div><b class="text-slate-200">3:</b> 회복약 (+생명)</div>
+                        <div><b class="text-slate-200">4:</b> 은신 망토 (투명화)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Black Market Shop Bar -->
+        <div class="w-full mt-3 glass-panel p-3 rounded-2xl flex items-center justify-between border border-slate-800 gap-2">
+            <div class="text-xs font-bold text-slate-300 font-orbitron px-2 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🛒</span> 암시장 상점
+            </div>
+            <div class="flex items-center gap-2 flex-1 justify-end">
+                <button id="btn-buy-speed" class="glass-button px-3 py-2 rounded-xl text-xs flex items-center gap-2">
+                    <span class="text-base">⚡</span>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-200">신발 <span class="text-slate-400">[1]</span></div>
+                        <div class="text-amber-400 font-orbitron text-[10px]">100G (속도+0.8)</div>
+                    </div>
+                </button>
+                <button id="btn-buy-smoke" class="glass-button px-3 py-2 rounded-xl text-xs flex items-center gap-2">
+                    <span class="text-base">💣</span>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-200">연막탄 <span class="text-slate-400">[2]</span></div>
+                        <div class="text-amber-400 font-orbitron text-[10px]">150G (4초 마비)</div>
+                    </div>
+                </button>
+                <button id="btn-buy-heal" class="glass-button px-3 py-2 rounded-xl text-xs flex items-center gap-2">
+                    <span class="text-base">❤️</span>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-200">체력 회복 <span class="text-slate-400">[3]</span></div>
+                        <div class="text-amber-400 font-orbitron text-[10px]">200G (+1 생명)</div>
+                    </div>
+                </button>
+                <button id="btn-buy-cloak" class="glass-button px-3 py-2 rounded-xl text-xs flex items-center gap-2">
+                    <span class="text-base">👻</span>
+                    <div class="text-left">
+                        <div class="font-bold text-slate-200">은신 망토 <span class="text-slate-400">[4]</span></div>
+                        <div class="text-amber-400 font-orbitron text-[10px]">250G (3초 투명)</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio API Synthesizer ---
+        class SoundFX {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playJewel() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, this.ctx.currentTime); // A5
+                osc.frequency.exponentialRampToValueAtTime(1760, this.ctx.currentTime + 0.12); // A6
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+            playSmoke() {
+                if (!this.ctx) return;
+                const bufSize = this.ctx.sampleRate * 0.35;
+                const buffer = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                filter.frequency.linearRampToValueAtTime(150, this.ctx.currentTime + 0.35);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                noise.start();
+            }
+            playAlert() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(700, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.2);
+            }
+            playBuy() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08);
+                osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.16);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.24);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.24);
+            }
+        }
+        const sfx = new SoundFX();
+
+        // --- Canvas & Core Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI DOM Elements
+        const uiStage = document.getElementById('ui-stage');
+        const uiTreasure = document.getElementById('ui-treasure');
+        const uiLives = document.getElementById('ui-lives');
+        const uiGold = document.getElementById('ui-gold');
+        const statusStealth = document.getElementById('status-stealth');
+
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const modalIcon = document.getElementById('modal-icon');
+        const btnModalAction = document.getElementById('btn-modal-action');
+
+        const btnBuySpeed = document.getElementById('btn-buy-speed');
+        const btnBuySmoke = document.getElementById('btn-buy-smoke');
+        const btnBuyHeal = document.getElementById('btn-buy-heal');
+        const btnBuyCloak = document.getElementById('btn-buy-cloak');
+
+        // Grid Constants for Flood-Fill BFS Check
+        const GRID_SIZE = 30; // 960x540 canvas => 32x18 grid
+        const COLS = 32;
+        const ROWS = 18;
+
+        // State Variables
+        let gameState = 'START'; // START, PLAYING, GAMEOVER, CLEAR
+        let stage = 1;
+        let gold = 0;
+        let lives = 3;
+        let keys = {};
+        let totalStageTreasures = 0;
+
+        // Player Configuration
+        const player = {
+            x: 60,
+            y: 60,
+            radius: 14,
+            speed: 3.2,
+            baseSpeed: 3.2,
+            stealthTimer: 0
+        };
+
+        // World Data
+        let wallObstacles = []; // Array of rects
+        let gridMap = []; // 2D array: 0 = walkable, 1 = wall
+        let treasures = [];
+        let policeList = [];
+        let particles = [];
+        let popups = [];
+
+        // --- FLOOD-FILL (BFS) MAP & PATH VALIDATION ---
+        function generateConnectedMap(stageNum) {
+            gridMap = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
+            wallObstacles = [];
+
+            // 1. Boundary Walls
+            for (let r = 0; r < ROWS; r++) {
+                gridMap[r][0] = 1;
+                gridMap[r][COLS - 1] = 1;
+            }
+            for (let c = 0; c < COLS; c++) {
+                gridMap[0][c] = 1;
+                gridMap[ROWS - 1][c] = 1;
+            }
+
+            // 2. Wide Corridor Pillar Walls (Guaranteed >60px wide corridors)
+            const pillarLayouts = [
+                // Pattern 1: Wide spaced pillars
+                [{r: 4, c: 6, w: 2, h: 10}, {r: 4, c: 15, w: 2, h: 10}, {r: 4, c: 24, w: 2, h: 10}],
+                // Pattern 2: Center block layout
+                [{r: 4, c: 8, w: 16, h: 2}, {r: 12, c: 8, w: 16, h: 2}, {r: 7, c: 15, w: 2, h: 4}],
+                // Pattern 3: Scattered wide obstacles
+                [{r: 4, c: 6, w: 4, h: 4}, {r: 4, c: 22, w: 4, h: 4}, {r: 10, c: 6, w: 4, h: 4}, {r: 10, c: 22, w: 4, h: 4}, {r: 7, c: 14, w: 4, h: 4}]
+            ];
+
+            const chosenPillars = pillarLayouts[(stageNum - 1) % pillarLayouts.length];
+            chosenPillars.forEach(p => {
+                for (let r = p.r; r < p.r + p.h; r++) {
+                    for (let c = p.c; c < p.c + p.w; c++) {
+                        if (r > 1 && r < ROWS - 2 && c > 1 && c < COLS - 2) {
+                            gridMap[r][c] = 1;
+                        }
+                    }
+                }
+            });
+
+            // 3. Convert grid 1s into Rect Wall Objects
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (gridMap[r][c] === 1) {
+                        wallObstacles.push({
+                            x: c * GRID_SIZE,
+                            y: r * GRID_SIZE,
+                            w: GRID_SIZE,
+                            h: GRID_SIZE
+                        });
+                    }
+                }
+            }
+
+            // 4. Run BFS Flood Fill from Player Start (Col 2, Row 2)
+            const reachable = runBFS(2, 2);
+
+            // 5. Unblock any accidental isolated walkable cell
+            for (let r = 1; r < ROWS - 1; r++) {
+                for (let c = 1; c < COLS - 1; c++) {
+                    if (gridMap[r][c] === 0 && !reachable[r][c]) {
+                        // Open up adjacent wall to connect it
+                        gridMap[r][c] = 0;
+                        if (gridMap[r-1][c] === 1) gridMap[r-1][c] = 0;
+                        else if (gridMap[r+1][c] === 1) gridMap[r+1][c] = 0;
+                        else if (gridMap[r][c-1] === 1) gridMap[r][c-1] = 0;
+                        else if (gridMap[r][c+1] === 1) gridMap[r][c+1] = 0;
+                    }
+                }
+            }
+
+            // Re-build clean wallObstacles list after BFS fixing
+            wallObstacles = [];
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (gridMap[r][c] === 1) {
+                        wallObstacles.push({
+                            x: c * GRID_SIZE,
+                            y: r * GRID_SIZE,
+                            w: GRID_SIZE,
+                            h: GRID_SIZE
+                        });
+                    }
+                }
+            }
+        }
+
+        function runBFS(startC, startR) {
+            const visited = Array(ROWS).fill(false).map(() => Array(COLS).fill(false));
+            const queue = [{r: startR, c: startC}];
+            visited[startR][startC] = true;
+
+            const dr = [-1, 1, 0, 0];
+            const dc = [0, 0, -1, 1];
+
+            while (queue.length > 0) {
+                const {r, c} = queue.shift();
+                for (let i = 0; i < 4; i++) {
+                    const nr = r + dr[i];
+                    const nc = c + dc[i];
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                        if (gridMap[nr][nc] === 0 && !visited[nr][nc]) {
+                            visited[nr][nc] = true;
+                            queue.push({r: nr, c: nc});
+                        }
+                    }
+                }
+            }
+            return visited;
+        }
+
+        // --- LEVEL INITIALIZATION ---
+        function loadStage(stageNum) {
+            player.x = 75;
+            player.y = 75;
+            player.stealthTimer = 0;
+
+            generateConnectedMap(stageNum);
+
+            // Spawn Treasures in validated open grid cells
+            treasures = [];
+            totalStageTreasures = 6 + stageNum * 2;
+            const reachableCells = [];
+
+            for (let r = 2; r < ROWS - 2; r++) {
+                for (let c = 2; c < COLS - 2; c++) {
+                    if (gridMap[r][c] === 0) {
+                        const px = c * GRID_SIZE + GRID_SIZE / 2;
+                        const py = r * GRID_SIZE + GRID_SIZE / 2;
+                        if (Math.hypot(px - player.x, py - player.y) > 120) {
+                            reachableCells.push({c, r, x: px, y: py});
+                        }
+                    }
+                }
+            }
+
+            // Shuffle reachable cells
+            reachableCells.sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < Math.min(totalStageTreasures, reachableCells.length); i++) {
+                const cell = reachableCells[i];
+                const isRare = Math.random() < 0.3;
+                treasures.push({
+                    x: cell.x,
+                    y: cell.y,
+                    radius: isRare ? 10 : 8,
+                    value: isRare ? 50 : 20,
+                    isRare: isRare,
+                    color: isRare ? '#f59e0b' : '#38bdf8'
+                });
+            }
+
+            // Spawn Police Officers
+            policeList = [];
+            const policeCount = 2 + Math.floor(stageNum * 1.2);
+            for (let i = 0; i < policeCount; i++) {
+                spawnPolice(stageNum, reachableCells);
+            }
+
+            updateUI();
+        }
+
+        function spawnPolice(stageNum, availableCells) {
+            let validCell = null;
+            for (let cell of availableCells) {
+                const dist = Math.hypot(cell.x - player.x, cell.y - player.y);
+                if (dist > 220) { // Distance > 200px to prevent instant spawn hit
+                    validCell = cell;
+                    break;
+                }
+            }
+
+            if (!validCell) {
+                validCell = {x: 800, y: 450};
+            }
+
+            policeList.push({
+                x: validCell.x,
+                y: validCell.y,
+                radius: 13,
+                speed: 1.6 + (stageNum * 0.25),
+                angle: Math.random() * Math.PI * 2,
+                viewDist: 160,
+                fov: Math.PI / 3, // 60 deg cone
+                stunTimer: 0,
+                patrolTimer: 0
+            });
+        }
+
+        // --- SLIDING COLLISION PHYSICS ---
+        function checkRectOverlap(r1, r2) {
+            return !(r1.x + r1.w <= r2.x || r1.x >= r2.x + r2.w || r1.y + r1.h <= r2.y || r1.y >= r2.y + r2.h);
+        }
+
+        function movePlayerWithSliding(dx, dy) {
+            // Move X and test wall collisions
+            player.x += dx;
+            let pRect = {x: player.x - player.radius, y: player.y - player.radius, w: player.radius * 2, h: player.radius * 2};
+            for (let w of wallObstacles) {
+                if (checkRectOverlap(pRect, w)) {
+                    if (dx > 0) player.x = w.x - player.radius;
+                    else if (dx < 0) player.x = w.x + w.w + player.radius;
+                }
+            }
+
+            // Move Y and test wall collisions
+            player.y += dy;
+            pRect = {x: player.x - player.radius, y: player.y - player.radius, w: player.radius * 2, h: player.radius * 2};
+            for (let w of wallObstacles) {
+                if (checkRectOverlap(pRect, w)) {
+                    if (dy > 0) player.y = w.y - player.radius;
+                    else if (dy < 0) player.y = w.y + w.h + player.radius;
+                }
+            }
+        }
+
+        // --- CONTROLS & LISTENERS ---
+        window.addEventListener('keydown', e => {
+            sfx.init();
+            keys[e.key.toLowerCase()] = true;
+
+            if (gameState === 'PLAYING') {
+                if (e.key === '1') buySpeed();
+                if (e.key === '2') buySmoke();
+                if (e.key === '3') buyHeal();
+                if (e.key === '4') buyCloak();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Shop Functions
+        function buySpeed() {
+            if (gold >= 100) {
+                gold -= 100;
+                player.baseSpeed += 0.8;
+                player.speed = player.baseSpeed;
+                sfx.playBuy();
+                addPopup(player.x, player.y, "속도 +0.8!", "#38bdf8");
+                updateUI();
+            }
+        }
+
+        function buySmoke() {
+            if (gold >= 150) {
+                gold -= 150;
+                policeList.forEach(p => p.stunTimer = 240); // 4 seconds stun
+                sfx.playSmoke();
+                addPopup(player.x, player.y, "경찰 마비 (4초)!", "#c084fc");
+                updateUI();
+            }
+        }
+
+        function buyHeal() {
+            if (gold >= 200) {
+                gold -= 200;
+                lives++;
+                sfx.playBuy();
+                addPopup(player.x, player.y, "생명 +1!", "#f87171");
+                updateUI();
+            }
+        }
+
+        function buyCloak() {
+            if (gold >= 250) {
+                gold -= 250;
+                player.stealthTimer = 180; // 3 seconds invisibility
+                sfx.playBuy();
+                addPopup(player.x, player.y, "은신 활성화 (3초)!", "#22d3ee");
+                updateUI();
+            }
+        }
+
+        btnBuySpeed.addEventListener('click', buySpeed);
+        btnBuySmoke.addEventListener('click', buySmoke);
+        btnBuyHeal.addEventListener('click', buyHeal);
+        btnBuyCloak.addEventListener('click', buyCloak);
+
+        btnModalAction.addEventListener('click', () => {
+            sfx.init();
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                stage = 1;
+                gold = 0;
+                lives = 3;
+                player.baseSpeed = 3.2;
+                player.speed = player.baseSpeed;
+                loadStage(stage);
+            } else if (gameState === 'CLEAR') {
+                stage++;
+                loadStage(stage);
+            }
+            gameState = 'PLAYING';
+            modalOverlay.classList.add('hidden');
+        });
+
+        function showModal(title, desc, icon, btnText) {
+            modalTitle.innerText = title;
+            modalDesc.innerHTML = desc;
+            modalIcon.innerText = icon;
+            btnModalAction.innerText = btnText;
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function addPopup(x, y, text, color) {
+            popups.push({ x, y, text, color, alpha: 1, vy: -1.2 });
+        }
+
+        function updateUI() {
+            uiStage.innerText = `STAGE ${stage}`;
+            uiTreasure.innerText = `${totalStageTreasures - treasures.length} / ${totalStageTreasures}`;
+            uiLives.innerText = '❤️'.repeat(Math.max(0, lives));
+            uiGold.innerText = `${gold} G`;
+
+            btnBuySpeed.disabled = gold < 100;
+            btnBuySmoke.disabled = gold < 150;
+            btnBuyHeal.disabled = gold < 200;
+            btnBuyCloak.disabled = gold < 250;
+
+            if (player.stealthTimer > 0) {
+                statusStealth.classList.remove('hidden');
+            } else {
+                statusStealth.classList.add('hidden');
+            }
+        }
+
+        // --- UPDATE GAME STATE ---
+        function updatePlayer() {
+            let dx = 0;
+            let dy = 0;
+
+            if (keys['arrowup'] || keys['w']) dy -= 1;
+            if (keys['arrowdown'] || keys['s']) dy += 1;
+            if (keys['arrowleft'] || keys['a']) dx -= 1;
+            if (keys['arrowright'] || keys['d']) dx += 1;
+
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
+
+            movePlayerWithSliding(dx * player.speed, dy * player.speed);
+
+            if (player.stealthTimer > 0) {
+                player.stealthTimer--;
+            }
+
+            // Collect treasures
+            for (let i = treasures.length - 1; i >= 0; i--) {
+                const t = treasures[i];
+                const dist = Math.hypot(player.x - t.x, player.y - t.y);
+                if (dist < player.radius + t.radius) {
+                    gold += t.value;
+                    sfx.playJewel();
+                    addPopup(t.x, t.y, `+${t.value}G`, t.color);
+                    treasures.splice(i, 1);
+                    updateUI();
+                }
+            }
+
+            // Stage Clear Condition
+            if (treasures.length === 0) {
+                gameState = 'CLEAR';
+                showModal(`🎉 STAGE ${stage} 클리어!`, `축하합니다! 모든 보물을 모으셨습니다.<br>다음 단계에서 더 많은 보물을 획득하세요!`, "💎", "다음 스테이지");
+            }
+        }
+
+        function updatePolice() {
+            policeList.forEach(p => {
+                if (p.stunTimer > 0) {
+                    p.stunTimer--;
+                    return;
+                }
+
+                // Move police along facing angle
+                p.x += Math.cos(p.angle) * p.speed;
+                p.y += Math.sin(p.angle) * p.speed;
+
+                // Bounce off walls
+                const pRect = {x: p.x - p.radius, y: p.y - p.radius, w: p.radius * 2, h: p.radius * 2};
+                if (wallObstacles.some(w => checkRectOverlap(pRect, w))) {
+                    p.angle += Math.PI * 0.8 + (Math.random() - 0.5);
+                }
+
+                p.patrolTimer++;
+                if (p.patrolTimer > 150) {
+                    p.angle += (Math.random() - 0.5) * 1.5;
+                    p.patrolTimer = 0;
+                }
+
+                // Check collision with player (ignore if stealth is active)
+                if (player.stealthTimer <= 0) {
+                    const distToPlayer = Math.hypot(player.x - p.x, player.y - p.y);
+                    if (distToPlayer < player.radius + p.radius) {
+                        lives--;
+                        sfx.playAlert();
+                        updateUI();
+
+                        if (lives <= 0) {
+                            gameState = 'GAMEOVER';
+                            showModal("🚨 체포되었습니다!", `경찰에게 포위당했습니다...<br>최종 도달 스테이지: <b>${stage}</b> | 모은 골드: <b>${gold}G</b>`, "👮", "다시 도전하기");
+                        } else {
+                            player.x = 75;
+                            player.y = 75;
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- RENDER ENGINE ---
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Render Map Floor Grid
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid Lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let c = 0; c < COLS; c++) {
+                ctx.beginPath(); ctx.moveTo(c * GRID_SIZE, 0); ctx.lineTo(c * GRID_SIZE, canvas.height); ctx.stroke();
+            }
+            for (let r = 0; r < ROWS; r++) {
+                ctx.beginPath(); ctx.moveTo(0, r * GRID_SIZE); ctx.lineTo(canvas.width, r * GRID_SIZE); ctx.stroke();
+            }
+
+            // 2. Render Wall Obstacles
+            wallObstacles.forEach(w => {
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(w.x, w.y, w.w, w.h);
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(w.x + 1, w.y + 1, w.w - 2, w.h - 2);
+            });
+
+            // 3. Render Treasures
+            treasures.forEach(t => {
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+                ctx.fillStyle = t.color;
+                ctx.shadowColor = t.color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(t.isRare ? '👑' : '💎', t.x - 6, t.y + 4);
+            });
+
+            // 4. Render Police & Vision Cones
+            policeList.forEach(p => {
+                if (p.stunTimer === 0 && player.stealthTimer <= 0) {
+                    // Flashlight Vision Cone
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.arc(p.x, p.y, p.viewDist, p.angle - p.fov / 2, p.angle + p.fov / 2);
+                    ctx.closePath();
+                    const grad = ctx.createRadialGradient(p.x, p.y, 10, p.x, p.y, p.viewDist);
+                    grad.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+                    grad.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                }
+
+                // Police Officer Circle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.stunTimer > 0 ? '#a855f7' : '#ef4444';
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (p.stunTimer > 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText('💫', p.x - 6, p.y - 16);
+                }
+            });
+
+            // 5. Render Player (Thief)
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.stealthTimer > 0 ? 'rgba(56, 189, 248, 0.4)' : '#38bdf8';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Thief Mask Overlay
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(player.x - 8, player.y - 4, 16, 5);
+
+            // 6. Floating Text Popups
+            popups.forEach((pop, i) => {
+                pop.y += pop.vy;
+                pop.alpha -= 0.02;
+                ctx.fillStyle = pop.color;
+                ctx.font = 'bold 12px Orbitron';
+                ctx.globalAlpha = Math.max(0, pop.alpha);
+                ctx.fillText(pop.text, pop.x - 14, pop.y);
+                ctx.globalAlpha = 1;
+                if (pop.alpha <= 0) popups.splice(i, 1);
+            });
+        }
+
+        // --- MAIN LOOP ---
+        function gameLoop() {
+            if (gameState === 'PLAYING') {
+                updatePlayer();
+                updatePolice();
+            }
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Run
+        loadStage(stage);
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
