@@ -4,5 +4,10 @@
     "name": "고장난 테트리스",
     "nickname": "하로",
     "file": "tetris.html"
+  },
+  {
+    "name": "Neon Dead",
+    "nickname": "LMS13",
+    "file": "neon_dead.html"
   }
 ]
