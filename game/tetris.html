@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>테트리스 </title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#111827;color:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center}
+.game{display:flex;gap:20px;align-items:flex-start;padding:20px}
+.board-wrap{position:relative;background:#1f2937;padding:8px;border-radius:12px}
+#board{display:block;background:#080d18;border-radius:6px}
+.side{width:190px;display:flex;flex-direction:column;gap:10px}
+.panel{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px}
+.label{font-size:12px;color:#9ca3af;margin-bottom:4px}
+.value{font-size:24px;font-weight:bold}
+.next{height:80px;display:flex;justify-content:center;align-items:center}
+#next{background:#080d18;border-radius:6px}
+button{border:1px solid #4b5563;background:#374151;color:white;border-radius:8px;min-height:44px;padding:8px 12px;font-weight:bold;cursor:pointer}
+button:hover{background:#4b5563}
+.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.controls #change{grid-column:2}
+.controls #left{grid-column:1}
+.controls #down{grid-column:2}
+.controls #right{grid-column:3}
+.controls #drop{grid-column:2}
+.help{font-size:12px;line-height:1.6;color:#9ca3af}
+.overlay{position:absolute;inset:8px;background:rgba(0,0,0,.8);border-radius:6px;display:none;align-items:center;justify-content:center;text-align:center}
+.overlay.show{display:flex}
+.overlay h2{margin:0 0 8px}
+.overlay p{color:#d1d5db}
+@media(max-width:650px){.game{flex-direction:column;align-items:center}.side{width:min(300px,90vw)}}
+</style>
+</head>
+<body>
+
+<div class="game">
+  <div class="board-wrap">
+    <canvas id="board" width="300" height="600"></canvas>
+
+    <div id="overlay" class="overlay">
+      <div>
+        <h2 id="overlay-title">게임 오버 48705</h2>
+        <p id="overlay-text"></p>
+        <button id="restart">다시 시작</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="panel">
+      <div class="label">점수</div>
+      <div id="score" class="value">0</div>
+    </div>
+
+    <div class="panel">
+      <div class="label">줄</div>
+      <div id="lines" class="value">0</div>
+    </div>
+
+    <div class="panel">
+      <div class="label">레벨</div>
+      <div id="level" class="value">1</div>
+    </div>
+
+    <div class="panel">
+      <div class="label">다음 블록</div>
+      <div class="next">
+        <canvas id="next" width="100" height="80"></canvas>
+      </div>
+    </div>
+
+    <div class="panel controls">
+      <button id="change" title="랜덤 블록 변경">◆</button>
+      <button id="left">←</button>
+      <button id="down">↓</button>
+      <button id="right">→</button>
+      <button id="drop">⤓</button>
+    </div>
+
+    <div class="panel help">
+      ← → 이동<br>
+      ◆ 회전<br>
+      ↓ 빠르게 내리기<br>
+      Space 즉시 낙하 48705<br>
+      P 일시정지<br>
+      ↑ 회전
+    </div>
+
+    <button id="pause">일시정지</button>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById("board");
+const ctx=canvas.getContext("2d");
+
+const nextCanvas=document.getElementById("next");
+const nctx=nextCanvas.getContext("2d");
+
+const COLS=10;
+const ROWS=20;
+const SIZE=30;
+
+const colors=[
+  "",
+  "#58a6ff",
+  "#f2c94c",
+  "#eb5757",
+  "#bb6bd9",
+  "#56ccf2",
+  "#6fcf97",
+  "#f2994a"
+];
+
+/* 7가지 블록 */
+const shapes=[
+  [[1,1,1,1]],                 // I
+  [[1,1],[1,1]],               // O
+  [[0,1,0],[1,1,1]],           // T
+  [[1,0,0],[1,1,1]],           // J
+  [[0,0,1],[1,1,1]],           // L
+  [[1,1,0],[0,1,1]],           // S
+  [[0,1,1],[1,1,0]]            // Z
+];
+
+let board;
+let piece;
+let nextPiece;
+
+let score=0;
+let lines=0;
+let level=1;
+
+let dropInterval=800;
+let lastDrop=0;
+
+let paused=false;
+let gameOver=false;
+let raf;
+
+/* 보드 생성 */
+function newBoard(){
+  return Array.from(
+    {length:ROWS},
+    ()=>Array(COLS).fill(0)
+  );
+}
+
+/* 배열 복사 */
+function clone(m){
+  return m.map(row=>row.slice());
+}
+
+/* 랜덤 블록 생성 */
+function randomPiece(){
+  const type=Math.floor(Math.random()*shapes.length);
+
+  return {
+    shape:clone(shapes[type]),
+    color:type+1,
+    type:type,
+    x:Math.floor(
+      (COLS-shapes[type][0].length)/2
+    ),
+    y:0
+  };
+}
+
+/*
+ * 현재 블록을 다른 랜덤 모양으로 변경
+ *
+ * 기존 모양과 같은 모양은 나오지 않도록 함.
+ * 새 모양이 현재 위치에서 다른 블록과 충돌하면
+ * 원래 모양으로 되돌림.
+ */
+function changeShape(){
+  if(paused || gameOver) return;
+
+  let nextType;
+
+  do{
+    nextType=Math.floor(
+      Math.random()*shapes.length
+    );
+  }while(
+    nextType===piece.type &&
+    shapes.length>1
+  );
+
+  const oldType=piece.type;
+  const oldShape=piece.shape;
+  const oldColor=piece.color;
+  const oldX=piece.x;
+  const oldY=piece.y;
+
+  piece.type=nextType;
+  piece.shape=clone(shapes[nextType]);
+  piece.color=nextType+1;
+
+  /* 화면 밖으로 나가지 않도록 위치 조정 */
+  piece.x=Math.min(
+    Math.max(0,oldX),
+    COLS-piece.shape[0].length
+  );
+
+  /* 변경된 모양이 충돌하면 원래 모양 유지 */
+  if(collides(piece)){
+    piece.type=oldType;
+    piece.shape=oldShape;
+    piece.color=oldColor;
+    piece.x=oldX;
+    piece.y=oldY;
+  }
+
+  draw();
+}
+
+/* 게임 초기화 */
+function reset(){
+  cancelAnimationFrame(raf);
+
+  board=newBoard();
+  piece=randomPiece();
+  nextPiece=randomPiece();
+
+  score=0;
+  lines=0;
+  level=1;
+
+  dropInterval=800;
+  lastDrop=performance.now();
+
+  paused=false;
+  gameOver=false;
+
+  document.getElementById("pause").textContent="일시정지";
+  document.getElementById("overlay").classList.remove("show");
+
+  updateStats();
+  draw();
+
+  raf=requestAnimationFrame(loop);
+}
+
+/* 충돌 검사 */
+function collides(p,dx=0,dy=0,s=p.shape){
+  for(let y=0;y<s.length;y++){
+    for(let x=0;x<s[y].length;x++){
+
+      if(!s[y][x]) continue;
+
+      const nx=p.x+x+dx;
+      const ny=p.y+y+dy;
+
+      if(
+        nx<0 ||
+        nx>=COLS ||
+        ny>=ROWS ||
+        (ny>=0 && board[ny][nx])
+      ){
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/* 좌우 이동 */
+function move(dx){
+  if(
+    !paused &&
+    !gameOver &&
+    !collides(piece,dx,0)
+  ){
+    piece.x+=dx;
+    draw();
+  }
+}
+
+/* 아래로 한 칸 */
+function softDrop(){
+  if(paused || gameOver) return;
+
+  if(!collides(piece,0,1)){
+    piece.y++;
+    score++;
+  }else{
+    lock();
+  }
+
+  updateStats();
+  draw();
+}
+
+/* 즉시 낙하 */
+function hardDrop(){
+  if(paused || gameOver) return;
+
+  let distance=0;
+
+  while(!collides(piece,0,1)){
+    piece.y++;
+    distance++;
+  }
+
+  score+=distance*2;
+
+  lock();
+
+  updateStats();
+  draw();
+}
+
+/* 블록 고정 */
+function lock(){
+
+  for(let y=0;y<piece.shape.length;y++){
+    for(let x=0;x<piece.shape[y].length;x++){
+
+      if(piece.shape[y][x]){
+
+        const by=piece.y+y;
+
+        if(by<0){
+          endGame();
+          return;
+        }
+
+        board[by][piece.x+x]=piece.color;
+      }
+    }
+  }
+
+  clearLines();
+
+  piece=nextPiece;
+  nextPiece=randomPiece();
+
+  if(collides(piece)){
+    endGame();
+    return;
+  }
+
+  lastDrop=performance.now();
+}
+
+/* 줄 제거 */
+function clearLines(){
+  let count=0;
+
+  for(let y=ROWS-1;y>=0;y--){
+
+    if(board[y].every(Boolean)){
+
+      board.splice(y,1);
+      board.unshift(
+        Array(COLS).fill(0)
+      );
+
+      count++;
+      y++;
+    }
+  }
+
+  if(count){
+
+    const points=[
+      0,
+      100,
+      300,
+      500,
+      800
+    ][count];
+
+    score+=points*level;
+    lines+=count;
+
+    level=Math.floor(lines/10)+1;
+
+    dropInterval=Math.max(
+      90,
+      800-(level-1)*65
+    );
+  }
+}
+
+/* 게임 오버 */
+function endGame(){
+  gameOver=true;
+
+  document.getElementById(
+    "overlay-title"
+  ).textContent="게임 오버";
+
+  document.getElementById(
+    "overlay-text"
+  ).textContent=
+    `점수: ${score.toLocaleString()}점`;
+
+  document.getElementById(
+    "overlay"
+  ).classList.add("show");
+}
+
+/* 일시정지 */
+function togglePause(){
+  if(gameOver) return;
+
+  paused=!paused;
+
+  document.getElementById(
+    "pause"
+  ).textContent=
+    paused ? "계속하기" : "일시정지";
+
+  if(!paused){
+    lastDrop=performance.now();
+  }
+}
+
+/* 블록 그리기 */
+function drawCell(
+  c,
+  x,
+  y,
+  size=SIZE,
+  context=ctx
+){
+  if(y<0) return;
+
+  context.fillStyle=colors[c];
+
+  context.fillRect(
+    x*size+1,
+    y*size+1,
+    size-2,
+    size-2
+  );
+
+  context.fillStyle=
+    "rgba(255,255,255,.18)";
+
+  context.fillRect(
+    x*size+3,
+    y*size+3,
+    size-6,
+    3
+  );
+}
+
+/* 전체 게임판 그리기 */
+function draw(){
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  /* 고정 블록 */
+  for(let y=0;y<ROWS;y++){
+    for(let x=0;x<COLS;x++){
+
+      if(board[y][x]){
+        drawCell(
+          board[y][x],
+          x,
+          y
+        );
+      }
+    }
+  }
+
+  if(!gameOver){
+
+    /* 현재 블록 */
+    for(let y=0;y<piece.shape.length;y++){
+      for(let x=0;x<piece.shape[y].length;x++){
+
+        if(piece.shape[y][x]){
+
+          drawCell(
+            piece.color,
+            piece.x+x,
+            piece.y+y
+          );
+        }
+      }
+    }
+
+    /* 낙하 위치 표시 */
+    let ghostY=piece.y;
+
+    while(
+      !collides(
+        piece,
+        0,
+        ghostY-piece.y+1
+      )
+    ){
+      ghostY++;
+    }
+
+    ctx.globalAlpha=.18;
+
+    for(let y=0;y<piece.shape.length;y++){
+      for(let x=0;x<piece.shape[y].length;x++){
+
+        if(piece.shape[y][x]){
+
+          drawCell(
+            piece.color,
+            piece.x+x,
+            ghostY+y
+          );
+        }
+      }
+    }
+
+    ctx.globalAlpha=1;
+  }
+
+  drawNext();
+}
+
+/* 다음 블록 */
+function drawNext(){
+
+  nctx.clearRect(
+    0,
+    0,
+    nextCanvas.width,
+    nextCanvas.height
+  );
+
+  const s=nextPiece.shape;
+  const cell=20;
+
+  const ox=
+    (100-s[0].length*cell)/2;
+
+  const oy=
+    (80-s.length*cell)/2;
+
+  for(let y=0;y<s.length;y++){
+    for(let x=0;x<s[y].length;x++){
+
+      if(s[y][x]){
+
+        drawCell(
+          nextPiece.color,
+          x+ox/cell,
+          y+oy/cell,
+          cell,
+          nctx
+        );
+      }
+    }
+  }
+}
+
+/* 점수 표시 */
+function updateStats(){
+
+  document.getElementById(
+    "score"
+  ).textContent=
+    score.toLocaleString();
+
+  document.getElementById(
+    "lines"
+  ).textContent=lines;
+
+  document.getElementById(
+    "level"
+  ).textContent=level;
+}
+
+/* 게임 루프 */
+function loop(time){
+
+  if(
+    !paused &&
+    !gameOver &&
+    time-lastDrop>=dropInterval
+  ){
+
+    if(!collides(piece,0,1)){
+      piece.y++;
+    }else{
+      lock();
+    }
+
+    lastDrop=time;
+
+    draw();
+    updateStats();
+  }
+
+  if(!gameOver){
+    raf=requestAnimationFrame(loop);
+  }
+}
+
+/* 버튼 */
+document.getElementById(
+  "change"
+).onclick=changeShape;
+
+document.getElementById(
+  "left"
+).onclick=()=>move(-1);
+
+document.getElementById(
+  "right"
+).onclick=()=>move(1);
+
+document.getElementById(
+  "down"
+).onclick=softDrop;
+
+document.getElementById(
+  "drop"
+).onclick=hardDrop;
+
+document.getElementById(
+  "pause"
+).onclick=togglePause;
+
+document.getElementById(
+  "restart"
+).onclick=reset;
+
+/* 키보드 */
+document.addEventListener("keydown",e=>{
+
+  if(e.key==="ArrowLeft"){
+    e.preventDefault();
+    move(-1);
+  }
+
+  else if(e.key==="ArrowRight"){
+    e.preventDefault();
+    move(1);
+  }
+
+  else if(e.key==="ArrowDown"){
+    e.preventDefault();
+    softDrop();
+  }
+
+  /* ↑도 회전하지 않고 랜덤 변경 */
+  else if(e.key==="ArrowUp"){
+    e.preventDefault();
+    changeShape();
+  }
+
+  else if(e.code==="Space"){
+    e.preventDefault();
+    hardDrop();
+  }
+
+  else if(e.key.toLowerCase()==="p"){
+    togglePause();
+  }
+});
+
+reset();
+</script>
+ 
+</body>
+</html>
