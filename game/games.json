@@ -19,5 +19,10 @@
     "name": "틱택토",
     "nickname": "한겨리",
     "file": "code_artifact.html"
+  },
+    {
+    "name": "잘 만든 FPS 게임",
+    "nickname": "잘 만드는 학생",
+    "file": "interactive_3d_action_fps_game.html"
   }
 ]
