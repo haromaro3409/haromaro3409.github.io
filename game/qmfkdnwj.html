@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>키캡 말랑이 슬라임 스튜디오 (Keycap Jelly Slime Studio)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gamja+Flower&family=Single+Day&display=swap" rel="stylesheet">
+  <!-- Tone.js for soft synth keyboard & squishy sounds -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <style>
+    body {
+      font-family: 'Jua', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #0d1117;
+      color: #f0f6fc;
+      touch-action: manipulation;
+    }
+    .font-single { font-family: 'Single Day', cursive; }
+    .font-gamja { font-family: 'Gamja Flower', cursive; }
+    
+    /* Jelly bouncy effects */
+    @keyframes jellyBounce {
+      0% { transform: scale(1, 1); }
+      30% { transform: scale(1.25, 0.75); }
+      40% { transform: scale(0.75, 1.25); }
+      50% { transform: scale(1.15, 0.85); }
+      65% { transform: scale(0.95, 1.05); }
+      75% { transform: scale(1.05, 0.95); }
+      100% { transform: scale(1, 1); }
+    }
+
+    .jelly-anim {
+      animation: jellyBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .glass-panel {
+      background: rgba(22, 27, 34, 0.75);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Custom range styling */
+    input[type=range] {
+      accent-color: #f472b6;
+    }
+
+    canvas {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100 overflow-x-hidden">
+
+  <!-- HEADER -->
+  <header class="glass-panel sticky top-0 z-50 px-4 py-3">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-cyan-400 p-0.5 shadow-lg shadow-pink-500/20">
+          <div class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center text-pink-400 text-xl">
+            🧪
+          </div>
+        </div>
+        <div>
+          <h1 class="font-single text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 font-bold tracking-wide">
+            키캡 말랑이 슬라임 젤리 🫧⌨️
+          </h1>
+          <p class="text-xs text-slate-400">말랑거리는 젤리 키캡 쌓기 & 톡톡 뽁뽁이 ASMR 슬라임</p>
+        </div>
+      </div>
+
+      <!-- NAV TABS -->
+      <nav class="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+        <button id="nav-tower" onclick="switchTab('tower')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md transition flex items-center gap-1.5">
+          <i class="fa-solid fa-cubes-stacked"></i> 젤리 타워 쌓기
+        </button>
+        <button id="nav-slime" onclick="switchTab('slime')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-hand-holding-hand"></i> 말랑이 ASMR
+        </button>
+        <button id="nav-custom" onclick="switchTab('custom')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 키캡 슬라임 제작
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="max-w-5xl mx-auto w-full p-3 sm:p-5 flex-1 flex flex-col justify-center items-center">
+
+    <!-- 1. TOWER STACKING GAME TAB -->
+    <div id="tab-tower" class="w-full max-w-3xl flex flex-col items-center gap-3">
+      
+      <!-- Top HUD Bar -->
+      <div class="w-full glass-panel rounded-2xl p-3 px-5 flex items-center justify-between shadow-xl">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">높이:</span>
+            <span id="tower-score" class="text-2xl font-black text-pink-400 font-gamja">0층</span>
+          </div>
+          <div class="h-4 w-[2px] bg-slate-800"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">말랑 콤보:</span>
+            <span id="combo-score" class="text-lg font-bold text-cyan-300">0 PERFECT</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="resetTowerGame()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1">
+            <i class="fa-solid fa-rotate-right text-pink-400"></i> 다시하기
+          </button>
+        </div>
+      </div>
+
+      <!-- Game Canvas Container -->
+      <div class="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-950 rounded-3xl border-4 border-slate-800 overflow-hidden shadow-2xl flex items-center justify-center">
+        <canvas id="towerCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+        <!-- Floating Action Overlay Hint -->
+        <div id="tower-hint" class="absolute bottom-4 pointer-events-none bg-slate-900/80 border border-slate-700 px-4 py-2 rounded-full text-xs text-pink-300 font-bold backdrop-blur-sm animate-pulse">
+          <i class="fa-solid fa-hand-pointer mr-1"></i> 화면을 클릭하거나 [Space]를 눌러 말랑이 키캡을 쌓으세요!
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="tower-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30">
+          <div class="w-20 h-20 bg-pink-500/20 border-2 border-pink-400 text-pink-400 rounded-3xl flex items-center justify-center text-4xl shadow-xl mb-3 jelly-anim">
+            🫠
+          </div>
+          <h2 class="text-2xl font-bold text-pink-300 mb-1">말랑이가 쏟아졌어요!</h2>
+          <p id="modal-score-text" class="text-slate-300 text-sm mb-5">총 <span class="text-cyan-400 font-bold text-lg">15층</span>의 젤리 키캡 타워를 완성했습니다!</p>
+          <div class="flex gap-3">
+            <button onclick="resetTowerGame()" class="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold text-sm rounded-2xl shadow-lg transition">
+              <i class="fa-solid fa-play mr-1.5"></i> 다시 도전하기
+            </button>
+            <button onclick="shareGameLink()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-sm rounded-2xl transition">
+              <i class="fa-solid fa-share-nodes mr-1.5"></i> 기록 공유
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2. SQUISHY SLIME ASMR TAB -->
+    <div id="tab-slime" class="hidden w-full max-w-3xl flex flex-col items-center gap-4">
+      <div class="w-full glass-panel rounded-2xl p-4 text-center">
+        <h2 class="text-lg font-bold text-purple-300 mb-1">🫧 퐁신퐁신 젤리 키캡 터치 ASMR</h2>
+        <p class="text-xs text-slate-400">키캡 말랑이를 드래그하거나 주물러서 젤리 질감과 뽁뽁이 소리를 느껴보세요!</p>
+      </div>
+
+      <div class="relative w-full aspect-[4/3] bg-slate-950 rounded-3xl border-4 border-slate-800 overflow-hidden shadow-2xl">
+        <canvas id="slimeCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-3 w-full">
+        <button onclick="triggerSlimePop()" class="px-5 py-2.5 bg-pink-500/20 border border-pink-500/50 hover:bg-pink-500/30 text-pink-300 rounded-2xl font-bold text-xs transition flex items-center gap-2">
+          <i class="fa-solid fa-hand-fist"></i> 꾹 눌러서 찌그러뜨리기
+        </button>
+        <button onclick="changeSlimeSound('pop')" class="px-5 py-2.5 bg-cyan-500/20 border border-cyan-500/50 hover:bg-cyan-500/30 text-cyan-300 rounded-2xl font-bold text-xs transition flex items-center gap-2">
+          <i class="fa-solid fa-volume-high"></i> 뽁뽁이 소리 모드
+        </button>
+        <button onclick="changeSlimeSound('squish')" class="px-5 py-2.5 bg-purple-500/20 border border-purple-500/50 hover:bg-purple-500/30 text-purple-300 rounded-2xl font-bold text-xs transition flex items-center gap-2">
+          <i class="fa-solid fa-music"></i> 쫀득쫀득 사운드 모드
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. CUSTOMIZER TAB -->
+    <div id="tab-custom" class="hidden w-full max-w-3xl flex flex-col gap-4">
+      <div class="glass-panel rounded-3xl p-5 sm:p-6 space-y-5">
+        
+        <div>
+          <h2 class="text-base font-bold text-pink-400 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-palette text-lg"></i> 1. 말랑이 젤리 색상 테마
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <button onclick="setTheme('strawberry')" id="btn-theme-strawberry" class="p-3 bg-slate-900 border-2 border-pink-500/50 rounded-2xl text-left hover:border-pink-400 transition">
+              <span class="font-bold text-pink-400 block text-sm">🍓 딸기 젤리</span>
+              <span class="text-slate-400 text-[11px]">말랑한 분홍빛</span>
+            </button>
+            <button onclick="setTheme('soda')" id="btn-theme-soda" class="p-3 bg-slate-900 border-2 border-slate-800 rounded-2xl text-left hover:border-cyan-400 transition">
+              <span class="font-bold text-cyan-400 block text-sm">🫐 소다 슬라임</span>
+              <span class="text-slate-400 text-[11px]">톡톡 튀는 민트 블루</span>
+            </button>
+            <button onclick="setTheme('lemon')" id="btn-theme-lemon" class="p-3 bg-slate-900 border-2 border-slate-800 rounded-2xl text-left hover:border-amber-400 transition">
+              <span class="font-bold text-amber-300 block text-sm">🍋 레몬 푸딩</span>
+              <span class="text-slate-400 text-[11px]">상큼한 노란 젤리</span>
+            </button>
+            <button onclick="setTheme('galaxy')" id="btn-theme-galaxy" class="p-3 bg-slate-900 border-2 border-slate-800 rounded-2xl text-left hover:border-purple-400 transition">
+              <span class="font-bold text-purple-400 block text-sm">🌌 갤럭시 반짝이</span>
+              <span class="text-slate-400 text-[11px]">신비로운 영롱함</span>
+            </button>
+          </div>
+        </div>
+
+        <hr class="border-slate-800">
+
+        <div>
+          <h2 class="text-base font-bold text-cyan-400 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-lg"></i> 2. 말랑이 탄성 & 게임 난이도
+          </h2>
+          <div class="space-y-4 text-xs">
+            <div>
+              <div class="flex justify-between text-slate-300 font-bold mb-1">
+                <span>젤리 바운스 탄성 (Bounce)</span>
+                <span id="val-bounciness" class="text-pink-400">0.8</span>
+              </div>
+              <input type="range" id="cfg-bounciness" min="0.3" max="1.5" step="0.1" value="0.8" oninput="updateConfig()" class="w-full">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-300 font-bold mb-1">
+                <span>키캡 좌우 이동 속도</span>
+                <span id="val-speed" class="text-cyan-400">3.5</span>
+              </div>
+              <input type="range" id="cfg-speed" min="1.5" max="8" step="0.5" value="3.5" oninput="updateConfig()" class="w-full">
+            </div>
+          </div>
+        </div>
+
+        <hr class="border-slate-800">
+
+        <!-- Share URL Generator -->
+        <div>
+          <h2 class="text-base font-bold text-purple-400 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-share-nodes text-lg"></i> 3. 내 커스텀 말랑이 도전장 공유
+          </h2>
+          <div class="flex gap-2">
+            <input type="text" id="share-url-input" readonly class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-pink-300 select-all focus:outline-none">
+            <button onclick="copyShareUrl()" class="px-5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold rounded-xl text-xs shrink-0 transition flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-copy"></i> 복사
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 transform translate-y-20 opacity-0 flex items-center gap-3 z-50 text-sm font-bold border border-pink-300/30">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-lg"></i>
+    <span id="toast-msg">알림 메시지</span>
+  </div>
+
+  <script>
+    /* GAME STATE & CONFIG */
+    let config = {
+      theme: 'strawberry',
+      bounciness: 0.8,
+      speed: 3.5,
+      soundMode: 'pop'
+    };
+
+    const themes = {
+      strawberry: {
+        bg: ['#1e1b2e', '#0f0d1a'],
+        colors: ['#f472b6', '#fb7185', '#fda4af', '#f43f5e', '#e11d48'],
+        topColor: '#ffe4e6',
+        textColor: '#881337',
+        slimeColor: 'rgba(244, 114, 182, 0.85)'
+      },
+      soda: {
+        bg: ['#0f172a', '#060913'],
+        colors: ['#38bdf8', '#22d3ee', '#67e8f9', '#0284c7', '#06b6d4'],
+        topColor: '#e0f2fe',
+        textColor: '#0c4a6e',
+        slimeColor: 'rgba(56, 189, 248, 0.85)'
+      },
+      lemon: {
+        bg: ['#1c1917', '#0c0a09'],
+        colors: ['#fde047', '#facc15', '#fef08a', '#eab308', '#ca8a04'],
+        topColor: '#fef9c3',
+        textColor: '#713f12',
+        slimeColor: 'rgba(250, 204, 21, 0.85)'
+      },
+      galaxy: {
+        bg: ['#181824', '#09090f'],
+        colors: ['#c084fc', '#a855f7', '#e879f9', '#9333ea', '#7e22ce'],
+        topColor: '#f3e8ff',
+        textColor: '#581c87',
+        slimeColor: 'rgba(192, 132, 252, 0.85)'
+      }
+    };
+
+    const keyLabels = ["Shift", "Tab", "Space", "Enter", "Caps", "Ctrl", "Alt", "Esc", "Fn", "Option"];
+
+    /* AUDIO SYNTHESIS WITH TONE.JS */
+    let synth = null;
+    let membraneSynth = null;
+
+    function initAudio() {
+      try {
+        if (!synth && typeof Tone !== 'undefined') {
+          synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 0.2 }
+          }).toDestination();
+          synth.volume.value = -8;
+
+          membraneSynth = new Tone.MembraneSynth({
+            pitchDecay: 0.05,
+            octaves: 4,
+            envelope: { attack: 0.001, decay: 0.2, sustain: 0.01 }
+          }).toDestination();
+          membraneSynth.volume.value = -6;
+        }
+      } catch(e) {}
+    }
+
+    function playSquishSound(isPerfect = false) {
+      try {
+        initAudio();
+        if (Tone.context.state !== 'running') Tone.start();
+
+        if (config.soundMode === 'pop') {
+          const note = isPerfect ? "G5" : "C5";
+          membraneSynth.triggerAttackRelease(note, "16n");
+        } else {
+          const note = isPerfect ? "E5" : "G4";
+          synth.triggerAttackRelease(note, "8n");
+        }
+      } catch(e) {}
+    }
+
+    /* CANVAS 1: TOWER STACKING GAME */
+    const towerCanvas = document.getElementById('towerCanvas');
+    const towerCtx = towerCanvas.getContext('2d');
+    let stack = [];
+    let currentBlock = null;
+    let cameraOffsetY = 0;
+    let targetCameraOffsetY = 0;
+    let comboCount = 0;
+    let isGameOver = false;
+
+    function resetTowerGame() {
+      const container = towerCanvas.parentElement;
+      const w = towerCanvas.width = container.clientWidth || 600;
+      const h = towerCanvas.height = container.clientHeight || 400;
+
+      document.getElementById('tower-modal').classList.add('hidden');
+      isGameOver = false;
+      comboCount = 0;
+      cameraOffsetY = 0;
+      targetCameraOffsetY = 0;
+
+      const theme = themes[config.theme];
+      const baseW = 150;
+      const baseH = 38;
+
+      stack = [{
+        x: w / 2,
+        y: h - 60,
+        width: baseW,
+        height: baseH,
+        color: theme.colors[0],
+        label: "START",
+        bounceScaleY: 1
+      }];
+
+      spawnTowerKeycap(w, h);
+      updateTowerUI();
+    }
+
+    function spawnTowerKeycap(w, h) {
+      const lastKey = stack[stack.length - 1];
+      const theme = themes[config.theme];
+      const color = theme.colors[stack.length % theme.colors.length];
+      const label = keyLabels[stack.length % keyLabels.length];
+
+      currentBlock = {
+        x: 0,
+        y: lastKey.y - 40,
+        width: lastKey.width,
+        height: 38,
+        speed: config.speed * (Math.random() > 0.5 ? 1 : -1),
+        color: color,
+        label: label,
+        bounceScaleY: 1
+      };
+    }
+
+    function dropTowerKeycap() {
+      if (isGameOver || !currentBlock) return;
+
+      const lastKey = stack[stack.length - 1];
+      const diff = currentBlock.x - lastKey.x;
+      const absDiff = Math.abs(diff);
+
+      if (absDiff <= 8) {
+        // Perfect Alignment
+        currentBlock.x = lastKey.x;
+        comboCount++;
+        currentBlock.bounceScaleY = 0.6; // Squish Effect
+        playSquishSound(true);
+        showToast(`완벽한 젤리 착지!! (${comboCount} PERFECT)`, "fa-face-laugh-bounce");
+      } else {
+        comboCount = 0;
+        const newWidth = currentBlock.width - absDiff;
+
+        if (newWidth <= 12) {
+          endTowerGame();
+          return;
+        }
+
+        currentBlock.width = newWidth;
+        currentBlock.x = lastKey.x + (diff / 2);
+        currentBlock.bounceScaleY = 0.75;
+        playSquishSound(false);
+      }
+
+      stack.push({ ...currentBlock });
+
+      const h = towerCanvas.height;
+      if (currentBlock.y - cameraOffsetY < h * 0.45) {
+        targetCameraOffsetY += 40;
+      }
+
+      spawnTowerKeycap(towerCanvas.width, towerCanvas.height);
+      updateTowerUI();
+    }
+
+    function endTowerGame() {
+      isGameOver = true;
+      document.getElementById('modal-score-text').innerHTML = `총 <span class="text-pink-400 font-bold text-lg">${stack.length - 1}층</span>의 젤리 키캡 타워를 지었습니다!`;
+      document.getElementById('tower-modal').classList.remove('hidden');
+    }
+
+    function updateTowerUI() {
+      document.getElementById('tower-score').textContent = `${stack.length - 1}층`;
+      document.getElementById('combo-score').textContent = `${comboCount} PERFECT`;
+    }
+
+    function drawSquishyKeycap(ctx, x, y, width, height, color, label, bounceY = 1) {
+      ctx.save();
+      ctx.translate(x, y + height / 2);
+      ctx.scale(1 / bounceY, bounceY); // Squish deformation scale
+
+      const theme = themes[config.theme];
+      const radius = 10;
+
+      // Base Gel Drop Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.roundRect(-width / 2, -height / 2 + 6, width, height, radius);
+      ctx.fill();
+
+      // Main Jelly Body
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(-width / 2, -height / 2, width, height, radius);
+      ctx.fill();
+
+      // Top Gel Gloss Cap
+      ctx.fillStyle = theme.topColor;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.roundRect(-width / 2 + 6, -height / 2 + 3, width - 12, height - 12, 6);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      // Keycap Label
+      ctx.fillStyle = theme.textColor;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, 0, -2);
+
+      ctx.restore();
+    }
+
+    function renderTowerLoop() {
+      if (!document.getElementById('tab-tower').classList.contains('hidden')) {
+        const w = towerCanvas.width;
+        const h = towerCanvas.height;
+        const theme = themes[config.theme];
+
+        cameraOffsetY += (targetCameraOffsetY - cameraOffsetY) * 0.1;
+
+        // Background
+        const grad = towerCtx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, theme.bg[0]);
+        grad.addColorStop(1, theme.bg[1]);
+        towerCtx.fillStyle = grad;
+        towerCtx.fillRect(0, 0, w, h);
+
+        towerCtx.save();
+        towerCtx.translate(0, cameraOffsetY);
+
+        // Draw stacked blocks
+        stack.forEach(b => {
+          // Recover squish elasticity smoothly
+          if (b.bounceScaleY < 1) b.bounceScaleY += (1 - b.bounceScaleY) * (0.15 * config.bounciness);
+          drawSquishyKeycap(towerCtx, b.x, b.y, b.width, b.height, b.color, b.label, b.bounceScaleY);
+        });
+
+        // Active keycap movement
+        if (currentBlock && !isGameOver) {
+          currentBlock.x += currentBlock.speed;
+          
+          // 좌우 벽에 닿았을 때 반전되도록 정확한 경계 계산
+          const halfW = currentBlock.width / 2;
+          if (currentBlock.x - halfW <= 10) {
+            currentBlock.x = 10 + halfW;
+            currentBlock.speed = Math.abs(currentBlock.speed);
+          } else if (currentBlock.x + halfW >= w - 10) {
+            currentBlock.x = w - 10 - halfW;
+            currentBlock.speed = -Math.abs(currentBlock.speed);
+          }
+          
+          drawSquishyKeycap(towerCtx, currentBlock.x, currentBlock.y, currentBlock.width, currentBlock.height, currentBlock.color, currentBlock.label, 1);
+        }
+
+        towerCtx.restore();
+      }
+      requestAnimationFrame(renderTowerLoop);
+    }
+
+    /* CANVAS 2: SLIME / MALRANGI ASMR */
+    const slimeCanvas = document.getElementById('slimeCanvas');
+    const slimeCtx = slimeCanvas.getContext('2d');
+    let slimeNodes = [];
+    let isSquishing = false;
+
+    function initSlime() {
+      const container = slimeCanvas.parentElement;
+      const w = slimeCanvas.width = container.clientWidth || 600;
+      const h = slimeCanvas.height = container.clientHeight || 400;
+
+      slimeNodes = [];
+      const numNodes = 12;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = 90;
+
+      for (let i = 0; i < numNodes; i++) {
+        const angle = (i / numNodes) * Math.PI * 2;
+        slimeNodes.push({
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+          baseX: centerX + Math.cos(angle) * radius,
+          baseY: centerY + Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0
+        });
+      }
+    }
+
+    function triggerSlimePop() {
+      playSquishSound(true);
+      slimeNodes.forEach(node => {
+        node.vx += (Math.random() - 0.5) * 40;
+        node.vy += (Math.random() - 0.5) * 40;
+      });
+    }
+
+    function changeSlimeSound(mode) {
+      config.soundMode = mode;
+      showToast(mode === 'pop' ? "뽁뽁이 사운드 모드" : "쫀득쫀득 사운드 모드", "fa-volume-high");
+    }
+
+    function renderSlimeLoop() {
+      if (!document.getElementById('tab-slime').classList.contains('hidden')) {
+        const w = slimeCanvas.width;
+        const h = slimeCanvas.height;
+        const theme = themes[config.theme];
+
+        slimeCtx.fillStyle = theme.bg[1];
+        slimeCtx.fillRect(0, 0, w, h);
+
+        // Update Physics
+        slimeNodes.forEach(node => {
+          const dx = node.baseX - node.x;
+          const dy = node.baseY - node.y;
+          node.vx += dx * 0.08 * config.bounciness;
+          node.vy += dy * 0.08 * config.bounciness;
+          node.vx *= 0.85;
+          node.vy *= 0.85;
+          node.x += node.vx;
+          node.y += node.vy;
+        });
+
+        // Draw Soft Blob Shape
+        slimeCtx.fillStyle = theme.slimeColor;
+        slimeCtx.beginPath();
+        slimeCtx.moveTo(slimeNodes[0].x, slimeNodes[0].y);
+
+        for (let i = 0; i < slimeNodes.length; i++) {
+          const nextNode = slimeNodes[(i + 1) % slimeNodes.length];
+          const xc = (slimeNodes[i].x + nextNode.x) / 2;
+          const yc = (slimeNodes[i].y + nextNode.y) / 2;
+          slimeCtx.quadraticCurveTo(slimeNodes[i].x, slimeNodes[i].y, xc, yc);
+        }
+        slimeCtx.closePath();
+        slimeCtx.fill();
+
+        // Draw Gloss Face
+        const center = slimeNodes.reduce((acc, n) => ({ x: acc.x + n.x/slimeNodes.length, y: acc.y + n.y/slimeNodes.length }), {x:0, y:0});
+        slimeCtx.fillStyle = theme.topColor;
+        slimeCtx.beginPath();
+        slimeCtx.arc(center.x - 20, center.y - 20, 18, 0, Math.PI * 2);
+        slimeCtx.fill();
+      }
+      requestAnimationFrame(renderSlimeLoop);
+    }
+
+    /* SLIME TOUCH LISTENERS */
+    function handleSlimeInteraction(e) {
+      const rect = slimeCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      playSquishSound(false);
+      slimeNodes.forEach(node => {
+        const dist = Math.hypot(node.x - x, node.y - y);
+        if (dist < 100) {
+          const angle = Math.atan2(node.y - y, node.x - x);
+          node.vx += Math.cos(angle) * 20;
+          node.vy += Math.sin(angle) * 20;
+        }
+      });
+    }
+
+    slimeCanvas.addEventListener('pointerdown', handleSlimeInteraction);
+
+    /* INPUT EVENTS FOR TOWER */
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !document.getElementById('tab-tower').classList.contains('hidden')) {
+        e.preventDefault();
+        dropTowerKeycap();
+      }
+    });
+
+    towerCanvas.addEventListener('pointerdown', () => {
+      if (!isGameOver) dropTowerKeycap();
+    });
+
+    /* CONFIGURATION & CUSTOMIZER */
+    function setTheme(t) {
+      config.theme = t;
+      document.querySelectorAll('#tab-custom button').forEach(b => b.classList.replace('border-pink-500/50', 'border-slate-800'));
+      document.getElementById(`btn-theme-${t}`).classList.replace('border-slate-800', 'border-pink-500/50');
+      updateConfig();
+    }
+
+    function updateConfig() {
+      config.bounciness = parseFloat(document.getElementById('cfg-bounciness').value);
+      config.speed = parseFloat(document.getElementById('cfg-speed').value);
+
+      document.getElementById('val-bounciness').textContent = config.bounciness;
+      document.getElementById('val-speed').textContent = config.speed;
+
+      updateShareUrl();
+    }
+
+    function updateShareUrl() {
+      try {
+        const encoded = btoa(encodeURIComponent(JSON.stringify(config)));
+        const url = `${window.location.origin}${window.location.pathname}#malrangi=${encoded}`;
+        document.getElementById('share-url-input').value = url;
+      } catch(e) {}
+    }
+
+    function loadFromUrl() {
+      if (window.location.hash.startsWith('#malrangi=')) {
+        try {
+          const encoded = window.location.hash.replace('#malrangi=', '');
+          const decoded = JSON.parse(decodeURIComponent(atob(encoded)));
+          if (decoded && decoded.theme) {
+            config = decoded;
+            setTheme(decoded.theme);
+            showToast("공유받은 키캡 말랑이 세팅을 불러왔습니다!", "fa-wand-magic-sparkles");
+          }
+        } catch(e) {}
+      }
+    }
+
+    function copyShareUrl() {
+      const input = document.getElementById('share-url-input');
+      input.select();
+      document.execCommand('copy');
+      showToast("말랑이 링크가 복사되었습니다!", "fa-copy");
+    }
+
+    function shareGameLink() {
+      switchTab('custom');
+      copyShareUrl();
+    }
+
+    /* TAB NAVIGATION */
+    function switchTab(tab) {
+      document.getElementById('tab-tower').classList.add('hidden');
+      document.getElementById('tab-slime').classList.add('hidden');
+      document.getElementById('tab-custom').classList.add('hidden');
+
+      document.getElementById('nav-tower').className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5";
+      document.getElementById('nav-slime').className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5";
+      document.getElementById('nav-custom').className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5";
+
+      if (tab === 'tower') {
+        document.getElementById('tab-tower').classList.remove('hidden');
+        document.getElementById('nav-tower').className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md transition flex items-center gap-1.5";
+        resetTowerGame();
+      } else if (tab === 'slime') {
+        document.getElementById('tab-slime').classList.remove('hidden');
+        document.getElementById('nav-slime').className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md transition flex items-center gap-1.5";
+        initSlime();
+      } else if (tab === 'custom') {
+        document.getElementById('tab-custom').classList.remove('hidden');
+        document.getElementById('nav-custom').className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md transition flex items-center gap-1.5";
+        updateShareUrl();
+      }
+    }
+
+    function showToast(msg, icon = "fa-circle-check") {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      document.getElementById('toast-icon').className = `fa-solid ${icon} text-lg`;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 2500);
+    }
+
+    /* INITIALIZATION */
+    window.onload = function() {
+      setTheme('strawberry');
+      loadFromUrl();
+      resetTowerGame();
+      renderTowerLoop();
+      renderSlimeLoop();
+    };
+  </script>
+</body>
+</html>

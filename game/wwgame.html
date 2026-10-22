@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WWII: 대규모 탈출 작전 (탱크 주행 및 독립 포신 조준)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050505;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+      color: #fff;
+      font-family: monospace;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.8);
+    }
+    #crosshair::before {
+      top: 9px;
+      left: 0;
+      width: 20px;
+      height: 2px;
+    }
+    #crosshair::after {
+      top: 0;
+      left: 9px;
+      width: 2px;
+      height: 20px;
+    }
+    #crosshair.dot {
+      width: 6px;
+      height: 6px;
+      background: #ff3333;
+      border-radius: 50%;
+      border: 1px solid #fff;
+    }
+    #crosshair.dot::before, #crosshair.dot::after {
+      display: none;
+    }
+    #sniper-scope {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, transparent 30%, black 70%);
+      border: 2px solid #111;
+      display: none;
+      pointer-events: none;
+      z-index: 9;
+    }
+    #sniper-scope::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; width: 1px; height: 100%; background: rgba(0,0,0,0.8);
+    }
+    #sniper-scope::after {
+      content: '',
+      position: absolute;
+      top: 50%; left: 0; width: 100%; height: 1px; background: rgba(0,0,0,0.8);
+    }
+    .top-hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .hud-card {
+      background: rgba(15, 18, 15, 0.75);
+      border: 1px solid #4a5d43;
+      padding: 12px 18px;
+      border-radius: 4px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .status-val {
+      font-size: 22px;
+      font-weight: bold;
+      color: #72b063;
+    }
+    .bottom-hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .weapon-selector {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .weapon-slot {
+      background: rgba(20, 20, 20, 0.7);
+      border: 1px solid #555;
+      padding: 6px 10px;
+      font-size: 11px;
+      border-radius: 3px;
+      color: #aaa;
+    }
+    .weapon-slot.active {
+      background: rgba(75, 110, 60, 0.8);
+      border-color: #8ed375;
+      color: #fff;
+      font-weight: bold;
+    }
+    .health-bar-container {
+      width: 250px;
+      height: 16px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #666;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .health-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: #4caf50;
+      transition: width 0.2s ease;
+    }
+    #prompt-msg {
+      position: absolute;
+      top: 65%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffcc00;
+      padding: 10px 20px;
+      border: 1px solid #ffcc00;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 4px;
+      display: none;
+      letter-spacing: 1px;
+    }
+    #tank-hud {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 25, 20, 0.85);
+      border: 2px solid #8ba870;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-align: center;
+      display: none;
+    }
+    .reload-bar {
+      width: 180px;
+      height: 8px;
+      background: #333;
+      margin: 6px auto 0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .reload-fill {
+      width: 100%;
+      height: 100%;
+      background: #ffaa00;
+    }
+    .overlay-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 12, 10, 0.92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      color: #e0e0e0;
+      text-align: center;
+    }
+    .overlay-screen h1 {
+      font-size: 48px;
+      color: #83b373;
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .overlay-screen p {
+      max-width: 650px;
+      line-height: 1.6;
+      margin-bottom: 25px;
+      color: #ccc;
+      font-size: 15px;
+    }
+    .btn-start {
+      padding: 14px 36px;
+      font-size: 20px;
+      font-weight: bold;
+      background: #4e7343;
+      color: #fff;
+      border: 2px solid #7cb36b;
+      cursor: pointer;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.2s ease;
+      pointer-events: auto;
+    }
+    .btn-start:hover {
+      background: #639455;
+      transform: scale(1.05);
+    }
+    .controls-guide {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(20, 25, 20, 0.8);
+      padding: 15px 25px;
+      border-radius: 6px;
+      border: 1px solid #445533;
+      margin-bottom: 25px;
+      text-align: left;
+      font-size: 13px;
+    }
+    .controls-guide div span {
+      color: #ffcc00;
+      font-weight: bold;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <div id="ui-layer">
+    <div id="crosshair"></div>
+    <div id="sniper-scope"></div>
+
+    <div class="top-hud">
+      <div class="hud-card">
+        <div>작전 목표: <span style="color:#ffcc00;">적 돌진 저지 & 탈출</span></div>
+        <div style="font-size:12px; color:#aaa; margin-top:3px;">탈출 지점 거리: <span id="dist-val" class="status-val" style="font-size:15px;">0</span>m</div>
+      </div>
+      <div class="hud-card" style="text-align: right;">
+        <div>남은 적군</div>
+        <div id="enemy-count" class="status-val">0</div>
+      </div>
+    </div>
+
+    <div id="prompt-msg">[E] 키를 눌러 탱크 탑승</div>
+
+    <div id="tank-hud">
+      <div style="font-size:14px; color:#ffaa00; font-weight:bold;">75mm 주포 통제 시스템</div>
+      <div style="font-size:11px; color:#aaa; margin-top:2px;">[W, A, S, D] 차체 이동/회전 | [←, →] 포탑 | [↑, ↓] 포구멍</div>
+      <div class="reload-bar"><div id="tank-reload-fill" class="reload-fill"></div></div>
+      <div id="tank-status-text" style="font-size:11px; margin-top:4px; color:#ccc;">장전 완료 [마우스 좌클릭 발사]</div>
+    </div>
+
+    <div class="bottom-hud">
+      <div class="hud-card">
+        <div class="weapon-selector">
+          <div id="slot-1" class="weapon-slot active">1. M1 소총</div>
+          <div id="slot-2" class="weapon-slot">2. 톰슨 기관총</div>
+          <div id="slot-3" class="weapon-slot">3. BAR 중기관총</div>
+          <div id="slot-4" class="weapon-slot">4. Kar98k 저격총</div>
+          <div id="slot-5" class="weapon-slot">5. 단검[F]</div>
+          <div id="slot-6" class="weapon-slot">6. 수류탄[G]</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span id="weapon-name" style="font-size:16px; font-weight:bold; color:#fff;">M1 Garand</span>
+          <span id="ammo-display" style="font-size:20px; font-weight:bold; color:#ffcc00;">8 / ∞</span>
+        </div>
+        <div class="health-bar-container">
+          <div id="health-fill" class="health-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="hud-card" style="text-align: right;">
+        <div style="font-size:12px; color:#aaa;">체력</div>
+        <div id="health-text" style="font-size:24px; font-weight:bold; color:#4caf50;">100 HP</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="start-screen" class="overlay-screen">
+    <h1>WWII: Frontline Escaper</h1>
+    <p>탱크 탑승 시 <b>[W, A, S, D]</b>로 차체를 이동하고 원하는 위치에 멈춰 선 뒤, <b>[←, →]</b>로 포탑을 돌리고 <b>[↑, ↓]</b>로 포구멍을 조준해 적을 초토화하세요!</p>
+    
+    <div class="controls-guide">
+      <div><span>W, S</span> : 전차 전진 / 후진</div>
+      <div><span>A, D</span> : 전차 차체 회전</div>
+      <div><span>←, → / J, L</span> : 포탑 좌우 회전</div>
+      <div><span>↑, ↓ / I, K</span> : 포구멍 상하 조준</div>
+      <div><span>마우스 좌클릭</span> : 주포 발사 (적중 시 즉사)</div>
+      <div><span>E</span> : 탱크 탑승 / 하차</div>
+    </div>
+
+    <button class="btn-start" onclick="initGame()">전장 투입</button>
+  </div>
+
+  <div id="gameover-screen" class="overlay-screen" style="display: none;">
+    <h1 id="over-title" style="color: #ff3333;">전사하셨습니다</h1>
+    <p id="over-desc">돌진하는 적들의 근접 공격을 버티지 못했습니다.</p>
+    <button class="btn-start" onclick="location.reload()">재도전</button>
+  </div>
+
+  <script>
+    const WEAPONS = {
+      1: { name: 'M1 Garand (소총)', type: 'rifle', ammo: 8, maxAmmo: 8, fireRate: 350, damage: 45, reloadTime: 1500, range: 200, automatic: false },
+      2: { name: 'Thompson (기관총)', type: 'smg', ammo: 30, maxAmmo: 30, fireRate: 100, damage: 22, reloadTime: 1800, range: 120, automatic: true },
+      3: { name: 'BAR (중기관총)', type: 'lmg', ammo: 20, maxAmmo: 20, fireRate: 130, damage: 38, reloadTime: 2200, range: 180, automatic: true },
+      4: { name: 'Kar98k (저격총)', type: 'sniper', ammo: 5, maxAmmo: 5, fireRate: 1000, damage: 120, reloadTime: 2500, range: 350, automatic: false, hasScope: true },
+      5: { name: 'Combat Knife (단검)', type: 'melee', ammo: 1, maxAmmo: 1, fireRate: 500, damage: 100, range: 3.5, automatic: false },
+      6: { name: 'Mk2 Grenade (수류탄)', type: 'grenade', ammo: 3, maxAmmo: 3, fireRate: 1200, damage: 180, range: 15, automatic: false }
+    };
+
+    let scene, camera, renderer;
+    let clock = new THREE.Clock();
+    let isGameRunning = false;
+
+    let player = {
+      hp: 100,
+      maxHp: 100,
+      speed: 10,
+      runSpeed: 16,
+      position: new THREE.Vector3(0, 2, 180),
+      velocity: new THREE.Vector3(),
+      currentWeaponSlot: 1,
+      isAiming: false,
+      isReloading: false,
+      inTank: false,
+      mountedTank: null
+    };
+
+    let keys = {};
+    let mouse = { left: false, right: false };
+    let lastShotTime = 0;
+
+    let enemies = [];
+    let tanks = [];
+    let grenades = [];
+    let tankShells = [];
+    let particles = [];
+    let extractionZone = null;
+
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      if (type === 'rifle') {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.15);
+      } else if (type === 'smg' || type === 'lmg') {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.08);
+      } else if (type === 'sniper') {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+        gain.gain.setValueAtTime(0.8, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.4);
+      } else if (type === 'explosion' || type === 'tank_fire') {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(10, now + 0.9);
+        gain.gain.setValueAtTime(1.0, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.9);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.9);
+      } else if (type === 'slash' || type === 'hit') {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.linearRampToValueAtTime(200, now + 0.1);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.1);
+      }
+    }
+
+    function initGame() {
+      initAudio();
+      document.getElementById('start-screen').style.display = 'none';
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1e1a);
+      scene.fog = new THREE.FogExp2(0x1a1e1a, 0.008);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.rotation.order = 'YXZ';
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0x667766, 0.6);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+      dirLight.position.set(100, 150, 50);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 500;
+      const d = 200;
+      dirLight.shadow.camera.left = -d;
+      dirLight.shadow.camera.right = d;
+      dirLight.shadow.camera.top = d;
+      dirLight.shadow.camera.bottom = -d;
+      scene.add(dirLight);
+
+      createTerrain();
+      createBattlefieldDecorations();
+      createExtractionZone();
+      
+      spawnTank(new THREE.Vector3(10, 0, 130));
+      spawnTank(new THREE.Vector3(-40, 0, 20));
+
+      spawnInitialEnemies(60);
+
+      setupControls();
+      window.addEventListener('resize', onWindowResize);
+
+      document.body.requestPointerLock();
+
+      isGameRunning = true;
+      animate();
+    }
+
+    function createTerrain() {
+      const groundGeo = new THREE.PlaneGeometry(600, 600, 64, 64);
+      const posArr = groundGeo.attributes.position.array;
+      for (let i = 0; i < posArr.length; i += 3) {
+        let x = posArr[i];
+        let y = posArr[i+1];
+        posArr[i+2] = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 1.5;
+      }
+      groundGeo.computeVertexNormals();
+
+      const groundMat = new THREE.MeshStandardMaterial({
+        color: 0x2e3528,
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+    }
+
+    function createBattlefieldDecorations() {
+      for (let i = 0; i < 40; i++) {
+        let x = (Math.random() - 0.5) * 450;
+        let z = (Math.random() - 0.5) * 450;
+        if (Math.abs(z - 180) < 20) continue;
+
+        let type = Math.floor(Math.random() * 4);
+        if (type === 0) createSandbagBunker(x, z);
+        else if (type === 1) createCzechHedgehog(x, z);
+        else if (type === 2) createRuinedWall(x, z);
+        else createCrater(x, z);
+      }
+    }
+
+    function createSandbagBunker(x, z) {
+      const group = new THREE.Group();
+      const bagGeo = new THREE.BoxGeometry(1.6, 0.6, 0.8);
+      const bagMat = new THREE.MeshStandardMaterial({ color: 0x8a7759, roughness: 0.9 });
+
+      for (let layer = 0; layer < 3; layer++) {
+        for (let i = -2; i <= 2; i++) {
+          const bag = new THREE.Mesh(bagGeo, bagMat);
+          bag.position.set(i * 1.5, layer * 0.55 + 0.3, (i % 2) * 0.1);
+          bag.castShadow = true;
+          bag.receiveShadow = true;
+          group.add(bag);
+        }
+      }
+      group.position.set(x, 0, z);
+      scene.add(group);
+    }
+
+    function createCzechHedgehog(x, z) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.3 });
+      const geo = new THREE.BoxGeometry(0.3, 0.3, 4);
+
+      for (let i = 0; i < 3; i++) {
+        const bar = new THREE.Mesh(geo, mat);
+        if (i === 0) bar.rotation.x = Math.PI / 4;
+        if (i === 1) bar.rotation.y = Math.PI / 4;
+        if (i === 2) bar.rotation.z = Math.PI / 4;
+        bar.castShadow = true;
+        group.add(bar);
+      }
+      group.position.set(x, 1.2, z);
+      scene.add(group);
+    }
+
+    function createRuinedWall(x, z) {
+      const geo = new THREE.BoxGeometry(6 + Math.random()*4, 3 + Math.random()*2, 1);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x55504a, roughness: 0.8 });
+      const wall = new THREE.Mesh(geo, mat);
+      wall.position.set(x, 1.5, z);
+      wall.rotation.y = Math.random() * Math.PI;
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      scene.add(wall);
+    }
+
+    function createCrater(x, z) {
+      const geo = new THREE.RingGeometry(2, 5, 12);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x110d0a, side: THREE.DoubleSide });
+      const crater = new THREE.Mesh(geo, mat);
+      crater.rotation.x = -Math.PI / 2;
+      crater.position.set(x, 0.05, z);
+      scene.add(crater);
+    }
+
+    function createExtractionZone() {
+      const group = new THREE.Group();
+      
+      const baseGeo = new THREE.CylinderGeometry(8, 8, 0.4, 16);
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x334433, roughness: 0.6 });
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      base.position.y = 0.2;
+      group.add(base);
+
+      const light = new THREE.PointLight(0x00ff44, 3, 40);
+      light.position.y = 4;
+      group.add(light);
+
+      group.position.set(0, 0, -220);
+      scene.add(group);
+      extractionZone = group;
+    }
+
+    function spawnTank(position) {
+      const tankGroup = new THREE.Group();
+
+      const hullGeo = new THREE.BoxGeometry(5.5, 2, 9);
+      const tankMat = new THREE.MeshStandardMaterial({ color: 0x3b4437, roughness: 0.6, metalness: 0.4 });
+      const hull = new THREE.Mesh(hullGeo, tankMat);
+      hull.position.y = 1.5;
+      hull.castShadow = true;
+      tankGroup.add(hull);
+
+      const trackGeo = new THREE.BoxGeometry(1.2, 1.6, 9.2);
+      const trackMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+      const leftTrack = new THREE.Mesh(trackGeo, trackMat);
+      leftTrack.position.set(-2.8, 1.1, 0);
+      const rightTrack = new THREE.Mesh(trackGeo, trackMat);
+      rightTrack.position.set(2.8, 1.1, 0);
+      tankGroup.add(leftTrack);
+      tankGroup.add(rightTrack);
+
+      const turretGroup = new THREE.Group();
+      turretGroup.position.set(0, 3.1, -0.5);
+
+      const turretGeo = new THREE.CylinderGeometry(2.2, 2.5, 1.6, 12);
+      const turret = new THREE.Mesh(turretGeo, tankMat);
+      turret.castShadow = true;
+      turretGroup.add(turret);
+
+      const barrelGroup = new THREE.Group();
+      barrelGroup.position.set(0, 0.1, -1.5);
+
+      const barrelGeo = new THREE.CylinderGeometry(0.25, 0.3, 5.5, 12);
+      const barrelMat = new THREE.MeshStandardMaterial({ color: 0x222520, metalness: 0.8 });
+      const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(0, 0, -2.2);
+      barrel.castShadow = true;
+      barrelGroup.add(barrel);
+
+      turretGroup.add(barrelGroup);
+      tankGroup.add(turretGroup);
+
+      tankGroup.position.copy(position);
+      
+      const tankData = {
+        mesh: tankGroup,
+        turretGroup: turretGroup,
+        barrelGroup: barrelGroup,
+        barrel: barrel,
+        turretAngleY: 0,
+        barrelAngleX: 0,
+        position: tankGroup.position,
+        canShoot: true,
+        lastFired: 0,
+        cooldown: 2500
+      };
+
+      tanks.push(tankData);
+      scene.add(tankGroup);
+    }
+
+    function spawnEnemy(x, z) {
+      const enemyGroup = new THREE.Group();
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a5342, roughness: 0.7 });
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.5 });
+      const helmetMat = new THREE.MeshStandardMaterial({ color: 0x2d3328, roughness: 0.4, metalness: 0.3 });
+
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), bodyMat);
+      torso.position.y = 1.4;
+      torso.castShadow = true;
+      enemyGroup.add(torso);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), skinMat);
+      head.position.y = 2.2;
+      enemyGroup.add(head);
+
+      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), helmetMat);
+      helmet.scale.set(1.1, 0.7, 1.1);
+      helmet.position.set(0, 2.4, 0);
+      enemyGroup.add(helmet);
+
+      const legGeo = new THREE.BoxGeometry(0.3, 1.0, 0.3);
+      const leftLeg = new THREE.Mesh(legGeo, bodyMat);
+      leftLeg.position.set(-0.25, 0.5, 0);
+      const rightLeg = new THREE.Mesh(legGeo, bodyMat);
+      rightLeg.position.set(0.25, 0.5, 0);
+      enemyGroup.add(leftLeg);
+      enemyGroup.add(rightLeg);
+
+      enemyGroup.position.set(x, 0, z);
+
+      const enemyData = {
+        mesh: enemyGroup,
+        hp: 60,
+        lastAttack: 0,
+        attackRate: 1000,
+        speed: 5.5 + Math.random() * 2
+      };
+
+      enemies.push(enemyData);
+      scene.add(enemyGroup);
+    }
+
+    function spawnInitialEnemies(count) {
+      for (let i = 0; i < count; i++) {
+        let x = (Math.random() - 0.5) * 350;
+        let z = (Math.random() - 0.5) * 350 - 20;
+        spawnEnemy(x, z);
+      }
+    }
+
+    function setupControls() {
+      document.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+
+        if (['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'].includes(e.code)) {
+          let slot = parseInt(e.code.replace('Digit', ''));
+          switchWeapon(slot);
+        }
+
+        if (e.code === 'KeyE') toggleTankMount();
+        if (e.code === 'KeyR') reloadWeapon();
+        if (e.code === 'KeyG') throwGrenade();
+        if (e.code === 'KeyF') performMeleeAttack();
+      });
+
+      document.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+      });
+
+      document.addEventListener('mousedown', (e) => {
+        if (e.button === 0) mouse.left = true;
+        if (e.button === 2) {
+          mouse.right = true;
+          player.isAiming = true;
+          if (WEAPONS[player.currentWeaponSlot].hasScope) {
+            document.getElementById('sniper-scope').style.display = 'block';
+            camera.fov = 20;
+            camera.updateProjectionMatrix();
+          }
+        }
+      });
+
+      document.addEventListener('mouseup', (e) => {
+        if (e.button === 0) mouse.left = false;
+        if (e.button === 2) {
+          mouse.right = false;
+          player.isAiming = false;
+          document.getElementById('sniper-scope').style.display = 'none';
+          camera.fov = 75;
+          camera.updateProjectionMatrix();
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement === document.body) {
+          let sensitivity = player.isAiming ? 0.0008 : 0.0022;
+          
+          if (!player.inTank) {
+            camera.rotation.y -= e.movementX * sensitivity;
+            camera.rotation.x -= e.movementY * sensitivity;
+            camera.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camera.rotation.x));
+          }
+        }
+      });
+
+      document.addEventListener('contextmenu', e => e.preventDefault());
+    }
+
+    function switchWeapon(slot) {
+      if (player.inTank) return;
+      player.currentWeaponSlot = slot;
+      
+      document.querySelectorAll('.weapon-slot').forEach(el => el.classList.remove('active'));
+      document.getElementById(`slot-${slot}`).classList.add('active');
+
+      const w = WEAPONS[slot];
+      document.getElementById('weapon-name').innerText = w.name;
+      updateAmmoUI();
+    }
+
+    function updateAmmoUI() {
+      const w = WEAPONS[player.currentWeaponSlot];
+      if (w.type === 'melee') {
+        document.getElementById('ammo-display').innerText = '∞';
+      } else {
+        document.getElementById('ammo-display').innerText = `${w.ammo} / ${w.maxAmmo}`;
+      }
+    }
+
+    function reloadWeapon() {
+      const w = WEAPONS[player.currentWeaponSlot];
+      if (player.isReloading || w.ammo === w.maxAmmo || w.type === 'melee') return;
+
+      player.isReloading = true;
+      document.getElementById('ammo-display').innerText = '장전 중...';
+
+      setTimeout(() => {
+        w.ammo = w.maxAmmo;
+        player.isReloading = false;
+        updateAmmoUI();
+      }, w.reloadTime);
+    }
+
+    function toggleTankMount() {
+      if (player.inTank) {
+        player.inTank = false;
+        player.position.copy(player.mountedTank.position).add(new THREE.Vector3(4, 2, 0));
+        camera.position.copy(player.position);
+        player.mountedTank = null;
+        
+        document.getElementById('tank-hud').style.display = 'none';
+        document.getElementById('crosshair').className = '';
+      } else {
+        for (let t of tanks) {
+          let dist = player.position.distanceTo(t.position);
+          if (dist < 6) {
+            player.inTank = true;
+            player.mountedTank = t;
+            document.getElementById('tank-hud').style.display = 'block';
+            document.getElementById('crosshair').className = 'dot';
+            break;
+          }
+        }
+      }
+    }
+
+    function handleShooting(now) {
+      if (player.inTank) {
+        if (mouse.left) fireTankCannon(now);
+        return;
+      }
+
+      const w = WEAPONS[player.currentWeaponSlot];
+
+      if (mouse.left) {
+        if (now - lastShotTime < w.fireRate) return;
+        if (w.ammo <= 0 && w.type !== 'melee') {
+          reloadWeapon();
+          return;
+        }
+
+        lastShotTime = now;
+
+        if (w.type === 'melee') {
+          performMeleeAttack();
+        } else if (w.type === 'grenade') {
+          throwGrenade();
+        } else {
+          w.ammo--;
+          updateAmmoUI();
+          playSound(w.type);
+          
+          let raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+          
+          let targetObjects = enemies.map(e => e.mesh);
+          let intersects = raycaster.intersectObjects(targetObjects, true);
+
+          if (intersects.length > 0) {
+            let hitObj = intersects[0].object;
+            let enemyObj = enemies.find(e => {
+              let isParent = false;
+              e.mesh.traverse(child => { if (child === hitObj) isParent = true; });
+              return isParent;
+            });
+
+            if (enemyObj) {
+              enemyObj.hp -= w.damage;
+              createHitParticle(intersects[0].point);
+              if (enemyObj.hp <= 0) destroyEnemy(enemyObj);
+            }
+          }
+        }
+
+        if (!w.automatic) mouse.left = false;
+      }
+    }
+
+    function fireTankCannon(now) {
+      const tank = player.mountedTank;
+      if (!tank || now - tank.lastFired < tank.cooldown) return;
+
+      tank.lastFired = now;
+      playSound('tank_fire');
+
+      let barrelWorldPos = new THREE.Vector3();
+      tank.barrel.getWorldPosition(barrelWorldPos);
+
+      let dir = new THREE.Vector3(0, 0, -1);
+      dir.applyQuaternion(tank.barrel.getWorldQuaternion(new THREE.Quaternion()));
+
+      let shellGeo = new THREE.SphereGeometry(0.35, 8, 8);
+      let shellMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+      let shell = new THREE.Mesh(shellGeo, shellMat);
+      shell.position.copy(barrelWorldPos);
+
+      let light = new THREE.PointLight(0xffaa00, 3, 15);
+      shell.add(light);
+
+      scene.add(shell);
+
+      tankShells.push({
+        mesh: shell,
+        velocity: dir.multiplyScalar(100),
+        createdAt: now
+      });
+
+      createExplosionEffect(barrelWorldPos, 1);
+    }
+
+    function throwGrenade() {
+      const w = WEAPONS[6];
+      if (w.ammo <= 0) return;
+      w.ammo--;
+      updateAmmoUI();
+
+      let gGeo = new THREE.SphereGeometry(0.2, 8, 8);
+      let gMat = new THREE.MeshStandardMaterial({ color: 0x334422 });
+      let grenade = new THREE.Mesh(gGeo, gMat);
+
+      grenade.position.copy(camera.position);
+      
+      let dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+
+      grenades.push({
+        mesh: grenade,
+        velocity: dir.multiplyScalar(25).add(new THREE.Vector3(0, 5, 0)),
+        timer: 2.5
+      });
+
+      scene.add(grenade);
+    }
+
+    function performMeleeAttack() {
+      playSound('slash');
+      
+      enemies.forEach(e => {
+        let dist = player.position.distanceTo(e.mesh.position);
+        if (dist < 3.5) {
+          e.hp -= 100;
+          createHitParticle(e.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+          if (e.hp <= 0) destroyEnemy(e);
+        }
+      });
+    }
+
+    function triggerExplosion(pos, radius, damage) {
+      playSound('explosion');
+      createExplosionEffect(pos, 5);
+
+      enemies.forEach(e => {
+        let dist = pos.distanceTo(e.mesh.position);
+        if (dist <= radius) {
+          e.hp = 0;
+          destroyEnemy(e);
+        }
+      });
+
+      let pDist = pos.distanceTo(player.position);
+      if (pDist <= radius && !player.inTank) {
+        damagePlayer(Math.floor(damage * (1 - pDist / radius)));
+      }
+    }
+
+    function createExplosionEffect(pos, scale) {
+      for (let i = 0; i < 25 * scale; i++) {
+        let pGeo = new THREE.SphereGeometry(0.3 + Math.random() * 0.4, 6, 6);
+        let pMat = new THREE.MeshBasicMaterial({
+          color: Math.random() > 0.4 ? 0xff4400 : 0xffcc00,
+          transparent: true,
+          opacity: 1.0
+        });
+        let p = new THREE.Mesh(pGeo, pMat);
+        p.position.copy(pos);
+
+        let vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 15 * scale,
+          Math.random() * 12 * scale,
+          (Math.random() - 0.5) * 15 * scale
+        );
+
+        particles.push({ mesh: p, velocity: vel, life: 0.6 });
+        scene.add(p);
+      }
+    }
+
+    function createHitParticle(pos) {
+      let pGeo = new THREE.SphereGeometry(0.1, 4, 4);
+      let pMat = new THREE.MeshBasicMaterial({ color: 0xaa0000 });
+      let p = new THREE.Mesh(pGeo, pMat);
+      p.position.copy(pos);
+      particles.push({ mesh: p, velocity: new THREE.Vector3(0, 2, 0), life: 0.3 });
+      scene.add(p);
+    }
+
+    function destroyEnemy(enemyObj) {
+      scene.remove(enemyObj.mesh);
+      enemies = enemies.filter(e => e !== enemyObj);
+    }
+
+    function damagePlayer(amount) {
+      player.hp = Math.max(0, player.hp - amount);
+      document.getElementById('health-fill').style.width = `${player.hp}%`;
+      document.getElementById('health-text').innerText = `${player.hp} HP`;
+
+      if (player.hp <= 0) {
+        gameOver(false);
+      }
+    }
+
+    function animate() {
+      if (!isGameRunning) return;
+      requestAnimationFrame(animate);
+
+      const delta = clock.getDelta();
+      const now = performance.now();
+
+      handleShooting(now);
+
+      if (player.inTank && player.mountedTank) {
+        updateTankControls(delta);
+      } else {
+        updatePlayerMovement(delta);
+      }
+
+      updateTankShells(delta);
+      updateGrenades(delta);
+      updateParticles(delta);
+      updateEnemies(delta, now);
+      updateHUD();
+
+      if (enemies.length < 35) {
+        let spawnX = (Math.random() - 0.5) * 400;
+        let spawnZ = -100 - Math.random() * 150;
+        spawnEnemy(spawnX, spawnZ);
+      }
+
+      if (player.position.distanceTo(extractionZone.position) < 10) {
+        gameOver(true);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function updatePlayerMovement(delta) {
+      let moveSpeed = keys['ShiftLeft'] ? player.runSpeed : player.speed;
+      let moveDir = new THREE.Vector3();
+
+      if (keys['KeyW']) moveDir.z -= 1;
+      if (keys['KeyS']) moveDir.z += 1;
+      if (keys['KeyA']) moveDir.x -= 1;
+      if (keys['KeyD']) moveDir.x += 1;
+
+      moveDir.normalize();
+      moveDir.applyQuaternion(camera.quaternion);
+      moveDir.y = 0;
+
+      player.position.add(moveDir.multiplyScalar(moveSpeed * delta));
+      camera.position.copy(player.position);
+    }
+
+    // 탱크 탑승 시 조종 (W, A, S, D로 차체 이동 및 회전 가능 + 멈춰서 포탑/포구멍 정밀 조준)
+    function updateTankControls(delta) {
+      const tank = player.mountedTank;
+      let speed = 12;
+      let rotSpeed = 1.5;
+      let aimSpeed = 2.0;
+
+      // 1. 차체 이동 및 회전 (W, A, S, D)
+      if (keys['KeyW']) tank.mesh.translateZ(-speed * delta);
+      if (keys['KeyS']) tank.mesh.translateZ(speed * 0.5 * delta);
+      if (keys['KeyA']) tank.mesh.rotation.y += rotSpeed * delta;
+      if (keys['KeyD']) tank.mesh.rotation.y -= rotSpeed * delta;
+
+      // 2. 멈춰 서서 포탑(좌우) 및 포구멍(상하) 조준 (방향키 또는 J, L, I, K)
+      if (keys['ArrowLeft'] || keys['KeyJ']) {
+        tank.turretAngleY += aimSpeed * delta;
+        tank.turretGroup.rotation.y = tank.turretAngleY;
+      }
+      if (keys['ArrowRight'] || keys['KeyL']) {
+        tank.turretAngleY -= aimSpeed * delta;
+        tank.turretGroup.rotation.y = tank.turretAngleY;
+      }
+      if (keys['ArrowUp'] || keys['KeyI']) {
+        tank.barrelAngleX = Math.max(-0.35, tank.barrelAngleX - aimSpeed * delta);
+        tank.barrelGroup.rotation.z = tank.barrelAngleX;
+      }
+      if (keys['ArrowDown'] || keys['KeyK']) {
+        tank.barrelAngleX = Math.min(0.45, tank.barrelAngleX + aimSpeed * delta);
+        tank.barrelGroup.rotation.z = tank.barrelAngleX;
+      }
+
+      // 3. 카메라 추적
+      let camOffset = new THREE.Vector3(0, 6, 14);
+      camOffset.applyQuaternion(tank.mesh.quaternion);
+      camera.position.copy(tank.mesh.position).add(camOffset);
+      camera.lookAt(tank.mesh.position.clone().add(new THREE.Vector3(0, 3, 0)));
+      
+      player.position.copy(tank.mesh.position);
+    }
+
+    function updateTankShells(delta) {
+      for (let i = tankShells.length - 1; i >= 0; i--) {
+        let shell = tankShells[i];
+        shell.mesh.position.add(shell.velocity.clone().multiplyScalar(delta));
+
+        if (shell.mesh.position.y <= 0.2 || shell.mesh.position.distanceTo(player.position) > 300) {
+          triggerExplosion(shell.mesh.position, 14, 300);
+          scene.remove(shell.mesh);
+          tankShells.splice(i, 1);
+        }
+      }
+    }
+
+    function updateGrenades(delta) {
+      for (let i = grenades.length - 1; i >= 0; i--) {
+        let g = grenades[i];
+        g.timer -= delta;
+        g.velocity.y -= 9.8 * delta;
+        g.mesh.position.add(g.velocity.clone().multiplyScalar(delta));
+
+        if (g.mesh.position.y <= 0.2) {
+          g.mesh.position.y = 0.2;
+          g.velocity.set(0, 0, 0);
+        }
+
+        if (g.timer <= 0) {
+          triggerExplosion(g.mesh.position, 10, 180);
+          scene.remove(g.mesh);
+          grenades.splice(i, 1);
+        }
+      }
+    }
+
+    function updateParticles(delta) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.life -= delta;
+        p.mesh.position.add(p.velocity.clone().multiplyScalar(delta));
+        p.mesh.material.opacity = p.life / 0.6;
+
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    function updateEnemies(delta, now) {
+      enemies.forEach(enemy => {
+        let dist = enemy.mesh.position.distanceTo(player.position);
+
+        if (dist < 150) {
+          enemy.mesh.lookAt(player.position.x, enemy.mesh.position.y, player.position.z);
+          enemy.mesh.translateZ(enemy.speed * delta);
+
+          if (dist < 2.5) {
+            if (now - enemy.lastAttack > enemy.attackRate) {
+              enemy.lastAttack = now;
+              if (!player.inTank) {
+                damagePlayer(15);
+                playSound('hit');
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateHUD() {
+      document.getElementById('enemy-count').innerText = enemies.length;
+
+      let dist = Math.floor(player.position.distanceTo(extractionZone.position));
+      document.getElementById('dist-val').innerText = dist;
+
+      let nearTank = false;
+      if (!player.inTank) {
+        for (let t of tanks) {
+          if (player.position.distanceTo(t.position) < 6) {
+            nearTank = true;
+            break;
+          }
+        }
+      }
+      document.getElementById('prompt-msg').style.display = nearTank ? 'block' : 'none';
+
+      if (player.inTank && player.mountedTank) {
+        const tank = player.mountedTank;
+        const now = performance.now();
+        let elapsed = now - tank.lastFired;
+        let progress = Math.min(1.0, elapsed / tank.cooldown);
+
+        document.getElementById('tank-reload-fill').style.width = `${progress * 100}%`;
+        if (progress >= 1.0) {
+          document.getElementById('tank-status-text').innerText = '주포 장전 완료 [마우스 좌클릭 발사]';
+          document.getElementById('tank-status-text').style.color = '#72b063';
+        } else {
+          document.getElementById('tank-status-text').innerText = '주포 재장전 중...';
+          document.getElementById('tank-status-text').style.color = '#ffaa00';
+        }
+      }
+    }
+
+    function gameOver(isWin) {
+      isGameRunning = false;
+      document.exitPointerLock();
+
+      const screen = document.getElementById('gameover-screen');
+      const title = document.getElementById('over-title');
+      const desc = document.getElementById('over-desc');
+
+      if (isWin) {
+        title.innerText = "작전 성공! 탈출 완료";
+        title.style.color = "#4caf50";
+        desc.innerText = "탱크 포격으로 적진을 초토화하고 무사히 탈출했습니다!";
+      } else {
+        title.innerText = "전사하셨습니다";
+        title.style.color = "#ff3333";
+        desc.innerText = "적들의 습격을 막아내지 못했습니다.";
+      }
+
+      screen.style.display = 'flex';
+    }
+
+    function onWindowResize() {
+      if (!camera || !renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+  </script>
+</body>
+</html>

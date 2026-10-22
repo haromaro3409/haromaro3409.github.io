@@ -1,0 +1,614 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>별빛 피하기 - 운석 슈팅</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:#080d24;color:white;font-family:system-ui,sans-serif;text-align:center}
+.game{max-width:850px;margin:auto}
+h1{color:#9deaff;text-shadow:0 0 18px #557bff}
+.hud{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:15px 0}
+.hud span{background:#1b2852;border:1px solid #526bb0;border-radius:11px;padding:9px 12px;font-weight:bold}
+.board{position:relative;border:2px solid #6179ff;border-radius:15px;overflow:hidden;background:#101a40}
+canvas{display:block;width:100%;height:auto;touch-action:none}
+.overlay{position:absolute;inset:0;background:#070b20df;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.overlay.hidden{display:none}
+.overlay h2{font-size:clamp(24px,5vw,36px);margin:0 0 10px}
+.overlay p{line-height:1.8;color:#d4ddff}
+button{border:0;border-radius:12px;padding:12px 17px;margin:4px;font-size:16px;font-weight:bold;cursor:pointer;touch-action:none}
+.start{background:#6ff4d1;color:#101d43}
+.pause{background:#344879;color:white}
+.shoot{background:#ffcf59;color:#302044}
+.controls{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:12px}
+.controls button{background:#233563;color:white;min-width:52px}
+small{color:#aabbea}
+</style>
+</head>
+<body>
+<div class="game">
+<h1>🚀 별빛 피하기</h1>
+<p>3배 빨라진 운석을 피하고 레이저로 파괴하자!</p>
+
+<div class="hud">
+  <span>⭐ 점수 <b id="score">0</b></span>
+  <span>💥 부순 운석 <b id="kills">0</b></span>
+  <span>❤️ 목숨 <b id="lives">❤️❤️❤️❤️❤️❤️❤️</b></span>
+  <span>🏆 최고 <b id="best">0</b></span>
+</div>
+
+<div class="board">
+  <canvas id="c" width="800" height="520"></canvas>
+  <div class="overlay" id="overlay">
+    <h2 id="title">☄️ 별빛 피하기!</h2>
+    <p id="message">
+      방향키 또는 WASD로 우주선을 움직여!<br>
+      스페이스바 또는 J 키로 레이저 발사!<br>
+      ⭐ 별빛을 먹으면 100점!<br>
+      🚀 생존 점수는 초당 15점!<br>
+      ☄️ 운석은 이전보다 3배 빨라!<br>
+      💥 레이저를 맞은 운석은 35% 확률로 파괴!<br>
+      ❤️ 목숨은 총 7개!
+    </p>
+    <button class="start" id="start">게임 시작 ▶</button>
+  </div>
+</div>
+
+<div class="controls">
+  <button data-key="ArrowLeft">◀</button>
+  <button data-key="ArrowUp">▲</button>
+  <button data-key="ArrowDown">▼</button>
+  <button data-key="ArrowRight">▶</button>
+  <button class="shoot" id="shoot">⚡ 발사!</button>
+</div>
+<button class="pause" id="pause">⏸ 일시정지</button>
+<p><small>이동: 방향키 / WASD · 발사: 스페이스바 / J · 일시정지: P</small></p>
+</div>
+
+<script>
+(()=>{
+"use strict";
+
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
+const $=id=>document.getElementById(id);
+const W=800,H=520;
+const MAX_LIVES=7;
+const ROCK_SPEED_MULTIPLIER=3;
+
+let player,rocks,bullets,stars,particles;
+let score=0,kills=0,lives=MAX_LIVES,elapsed=0;
+let active=false,paused=false,last=0;
+let spawn=0,starSpawn=0,shotCooldown=0;
+let keys={};
+let best=0;
+
+try{
+  best=Number(localStorage.getItem("starDodgeBest"))||0;
+}catch(e){}
+
+$("best").textContent=best;
+
+const sky=Array.from({length:110},()=>({
+  x:Math.random()*W,
+  y:Math.random()*H,
+  r:Math.random()*1.7+.3,
+  p:Math.random()*6
+}));
+
+function reset(){
+  player={x:W/2,y:H-70,r:16,shield:0};
+  rocks=[];
+  bullets=[];
+  stars=[];
+  particles=[];
+  score=0;
+  kills=0;
+  lives=MAX_LIVES;
+  elapsed=0;
+  spawn=.5;
+  starSpawn=1;
+  shotCooldown=0;
+  updateHUD();
+}
+
+function updateHUD(){
+  $("score").textContent=Math.floor(score);
+  $("kills").textContent=kills;
+  $("lives").textContent=
+    "❤️".repeat(lives)+"🖤".repeat(MAX_LIVES-lives);
+  $("best").textContent=best;
+}
+
+function background(t){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#172658");
+  g.addColorStop(1,"#070d25");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle="#8297ff10";
+  for(let x=0;x<W;x+=40){
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    ctx.lineTo(x,H);
+    ctx.stroke();
+  }
+
+  for(let y=0;y<H;y+=40){
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(W,y);
+    ctx.stroke();
+  }
+
+  for(const s of sky){
+    ctx.globalAlpha=.35+.55*(
+      .5+.5*Math.sin(t*.002+s.p)
+    );
+    ctx.fillStyle="#e4f1ff";
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha=1;
+}
+
+function drawPlayer(){
+  if(player.shield>0&&Math.floor(player.shield*12)%2===0)return;
+
+  ctx.save();
+  ctx.translate(player.x,player.y);
+  ctx.shadowBlur=20;
+  ctx.shadowColor="#59ffff";
+  ctx.fillStyle="#65f4ef";
+  ctx.beginPath();
+  ctx.moveTo(0,-23);
+  ctx.lineTo(19,15);
+  ctx.lineTo(0,9);
+  ctx.lineTo(-19,15);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowBlur=0;
+  ctx.fillStyle="white";
+  ctx.beginPath();
+  ctx.ellipse(0,0,5,8,0,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="#7e9cff";
+  ctx.fillRect(-15,18,8,9);
+  ctx.fillRect(7,18,8,9);
+
+  if(player.shield>0){
+    ctx.strokeStyle="#75ffff";
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(0,0,30,0,Math.PI*2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/* 운석의 원래 모양과 크기 유지 */
+function drawRock(r){
+  ctx.save();
+  ctx.translate(r.x,r.y);
+  ctx.rotate(r.rot);
+  ctx.shadowBlur=12;
+  ctx.shadowColor="#ff6b7c";
+  ctx.fillStyle="#c94767";
+  ctx.beginPath();
+
+  for(let i=0;i<9;i++){
+    const a=i*Math.PI*2/9;
+    const radius=r.r*(i%2?.78:1);
+
+    if(i===0){
+      ctx.moveTo(Math.cos(a)*radius,Math.sin(a)*radius);
+    }else{
+      ctx.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);
+    }
+  }
+
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur=0;
+
+  ctx.fillStyle="#ff9d8c";
+  ctx.beginPath();
+  ctx.arc(-r.r*.25,-r.r*.18,r.r*.23,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle="#7e2446";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(r.r*.12,-r.r*.15);
+  ctx.lineTo(r.r*.38,r.r*.15);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBullet(b){
+  ctx.save();
+  ctx.shadowBlur=16;
+  ctx.shadowColor="#58ffff";
+  ctx.fillStyle="#9cffff";
+  ctx.fillRect(b.x-3,b.y-12,6,20);
+  ctx.fillStyle="#ffffff";
+  ctx.fillRect(b.x-1,b.y-10,2,13);
+  ctx.restore();
+}
+
+function drawStar(s,t){
+  ctx.save();
+  ctx.translate(s.x,s.y);
+  ctx.rotate(Math.sin(t*.003+s.p)*.2);
+  ctx.shadowBlur=18;
+  ctx.shadowColor="#ffe66d";
+  ctx.fillStyle="#ffe66d";
+  ctx.beginPath();
+
+  for(let i=0;i<10;i++){
+    const a=-Math.PI/2+i*Math.PI/5;
+    const r=i%2?s.r*.45:s.r;
+
+    if(i===0){
+      ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+    }else{
+      ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    }
+  }
+
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function burst(x,y,color,count=14){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2;
+    const v=45+Math.random()*180;
+
+    particles.push({
+      x,y,
+      vx:Math.cos(a)*v,
+      vy:Math.sin(a)*v,
+      life:.35+Math.random()*.5,
+      max:.85,
+      color,
+      r:2+Math.random()*3
+    });
+  }
+}
+
+function hit(a,b){
+  return Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r;
+}
+
+function spawnRock(){
+  const r=15+Math.random()*15;
+  const difficulty=1+Math.min(elapsed/50,1.4);
+
+  rocks.push({
+    x:25+Math.random()*(W-50),
+    y:-35,
+    r,
+    /* 기존 운석 속도에 3을 곱함 */
+    vy:(130+Math.random()*85)*difficulty*ROCK_SPEED_MULTIPLIER,
+    rot:Math.random()*6.28,
+    spin:(Math.random()-.5)*2.8
+  });
+}
+
+function spawnStar(){
+  stars.push({
+    x:25+Math.random()*(W-50),
+    y:-20,
+    r:12,
+    vy:125+Math.random()*45,
+    p:Math.random()*6
+  });
+}
+
+function shoot(){
+  if(!active||paused||shotCooldown>0)return;
+
+  bullets.push({
+    x:player.x,
+    y:player.y-22,
+    r:5,
+    vy:440
+  });
+
+  shotCooldown=.17;
+}
+
+function draw(t){
+  background(t);
+
+  for(const s of stars)drawStar(s,t);
+  for(const r of rocks)drawRock(r);
+  for(const b of bullets)drawBullet(b);
+
+  for(const p of particles){
+    ctx.globalAlpha=Math.max(0,p.life/p.max);
+    ctx.fillStyle=p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha=1;
+  drawPlayer();
+}
+
+function finish(){
+  active=false;
+  paused=false;
+
+  if(Math.floor(score)>best){
+    best=Math.floor(score);
+
+    try{
+      localStorage.setItem("starDodgeBest",best);
+    }catch(e){}
+  }
+
+  updateHUD();
+
+  $("title").textContent="게임 오버! 💫";
+  $("message").innerHTML=
+    "최종 점수: <b>"+Math.floor(score)+"점</b><br>"+
+    "부순 운석: <b>"+kills+"개</b><br>"+
+    "다시 도전해 봐!";
+
+  $("start").textContent="다시 시작 🔁";
+  $("overlay").classList.remove("hidden");
+}
+
+function loop(t){
+  requestAnimationFrame(loop);
+
+  if(!active||paused){
+    draw(t);
+    return;
+  }
+
+  const dt=Math.min((t-last)/1000||0,.035);
+  last=t;
+  elapsed+=dt;
+
+  /* 생존 점수: 초당 15점 */
+  score+=dt*15;
+
+  shotCooldown=Math.max(0,shotCooldown-dt);
+  player.shield=Math.max(0,player.shield-dt);
+
+  let dx=0,dy=0;
+
+  if(keys.ArrowLeft||keys.a||keys.A)dx--;
+  if(keys.ArrowRight||keys.d||keys.D)dx++;
+  if(keys.ArrowUp||keys.w||keys.W)dy--;
+  if(keys.ArrowDown||keys.s||keys.S)dy++;
+
+  if(dx&&dy){
+    dx*=.707;
+    dy*=.707;
+  }
+
+  player.x=Math.max(22,Math.min(W-22,player.x+dx*310*dt));
+  player.y=Math.max(30,Math.min(H-25,player.y+dy*310*dt));
+
+  if(keys[" "]||keys.j||keys.J)shoot();
+
+  spawn-=dt;
+  starSpawn-=dt;
+
+  if(spawn<=0){
+    spawn=Math.max(.25,.8-elapsed*.006)+Math.random()*.2;
+    spawnRock();
+
+    if(elapsed>15&&Math.random()<.25){
+      spawnRock();
+    }
+  }
+
+  if(starSpawn<=0){
+    starSpawn=1.5+Math.random()*1.3;
+    spawnStar();
+  }
+
+  /* 레이저에 맞으면 35% 확률로 운석 파괴 */
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
+    b.y-=b.vy*dt;
+
+    if(b.y<-30){
+      bullets.splice(i,1);
+      continue;
+    }
+
+    for(let j=rocks.length-1;j>=0;j--){
+      const r=rocks[j];
+
+      if(hit(b,r)){
+        bullets.splice(i,1);
+
+        if(Math.random()<.35){
+          burst(r.x,r.y,"#ffad62",22);
+          score+=25;
+          kills++;
+          rocks.splice(j,1);
+        }else{
+          /* 파괴 실패: 운석은 그대로 남음 */
+          burst(b.x,b.y,"#83ffff",5);
+        }
+
+        break;
+      }
+    }
+  }
+
+  /* 운석에 맞으면 목숨 1개 감소 */
+  for(let i=rocks.length-1;i>=0;i--){
+    const r=rocks[i];
+    r.y+=r.vy*dt;
+    r.rot+=r.spin*dt;
+
+    if(r.y>H+45){
+      rocks.splice(i,1);
+      continue;
+    }
+
+    if(player.shield<=0&&hit(player,r)){
+      rocks.splice(i,1);
+      lives--;
+      player.shield=1.2;
+      burst(player.x,player.y,"#ff719b",15);
+
+      if(lives<=0){
+        updateHUD();
+        draw(t);
+        finish();
+        return;
+      }
+    }
+  }
+
+  /* 별빛을 먹으면 100점 */
+  for(let i=stars.length-1;i>=0;i--){
+    const s=stars[i];
+    s.y+=s.vy*dt;
+
+    if(s.y>H+25){
+      stars.splice(i,1);
+      continue;
+    }
+
+    if(hit(player,s)){
+      stars.splice(i,1);
+      score+=100;
+      burst(s.x,s.y,"#ffe66d",18);
+    }
+  }
+
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.vx*=.97;
+    p.vy*=.97;
+    p.life-=dt;
+
+    if(p.life<=0){
+      particles.splice(i,1);
+    }
+  }
+
+  updateHUD();
+  draw(t);
+}
+
+function startGame(){
+  reset();
+  active=true;
+  paused=false;
+  last=performance.now();
+  $("overlay").classList.add("hidden");
+  $("pause").textContent="⏸ 일시정지";
+}
+
+function togglePause(){
+  if(!active)return;
+
+  paused=!paused;
+
+  if(paused){
+    $("title").textContent="잠시 휴식! ⏸";
+    $("message").textContent="계속하기를 누르면 게임이 이어져!";
+    $("start").textContent="계속하기 ▶";
+    $("overlay").classList.remove("hidden");
+    $("pause").textContent="▶ 계속하기";
+  }else{
+    $("overlay").classList.add("hidden");
+    $("pause").textContent="⏸ 일시정지";
+    last=performance.now();
+  }
+}
+
+$("start").addEventListener("click",()=>{
+  if(paused){
+    paused=false;
+    $("overlay").classList.add("hidden");
+    $("pause").textContent="⏸ 일시정지";
+    last=performance.now();
+  }else{
+    startGame();
+  }
+});
+
+$("pause").addEventListener("click",togglePause);
+
+window.addEventListener("keydown",e=>{
+  if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key)){
+    e.preventDefault();
+  }
+
+  keys[e.key]=true;
+
+  if((e.key==="p"||e.key==="P")&&active){
+    togglePause();
+  }
+},{passive:false});
+
+window.addEventListener("keyup",e=>{
+  keys[e.key]=false;
+});
+
+window.addEventListener("blur",()=>{
+  keys={};
+});
+
+document.querySelectorAll("[data-key]").forEach(btn=>{
+  const k=btn.dataset.key;
+
+  btn.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    keys[k]=true;
+  });
+
+  for(const ev of ["pointerup","pointercancel","pointerleave"]){
+    btn.addEventListener(ev,e=>{
+      e.preventDefault();
+      keys[k]=false;
+    });
+  }
+});
+
+const shootBtn=$("shoot");
+
+shootBtn.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  keys[" "]=true;
+  shoot();
+});
+
+for(const ev of ["pointerup","pointercancel","pointerleave"]){
+  shootBtn.addEventListener(ev,()=>{
+    keys[" "]=false;
+  });
+}
+
+reset();
+draw(0);
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASMR Game</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+overflow:hidden;
+font-family:Arial,sans-serif;
+background:linear-gradient(#0d1b2a,#1b263b,#415a77);
+height:100vh;
+cursor:pointer;
+}
+
+#game{
+position:relative;
+width:100%;
+height:100%;
+overflow:hidden;
+}
+
+#title{
+position:absolute;
+top:20px;
+width:100%;
+text-align:center;
+font-size:45px;
+font-weight:bold;
+color:white;
+text-shadow:0 0 20px cyan;
+}
+
+#subtitle{
+position:absolute;
+top:80px;
+width:100%;
+text-align:center;
+color:#ddd;
+font-size:20px;
+}
+
+.menu{
+position:absolute;
+left:20px;
+top:150px;
+display:flex;
+flex-direction:column;
+gap:15px;
+z-index:10;
+}
+
+button{
+padding:14px;
+font-size:18px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+background:#ffffff22;
+color:white;
+backdrop-filter:blur(6px);
+transition:.2s;
+}
+
+button:hover{
+transform:scale(1.05);
+background:#66ccff66;
+}
+
+#playArea{
+position:absolute;
+left:220px;
+top:120px;
+right:20px;
+bottom:20px;
+border-radius:20px;
+background:rgba(255,255,255,.05);
+overflow:hidden;
+box-shadow:0 0 30px rgba(255,255,255,.1);
+}
+
+.item{
+position:absolute;
+font-size:55px;
+cursor:pointer;
+transition:.15s;
+user-select:none;
+}
+
+.item:hover{
+transform:scale(1.15);
+}
+
+#message{
+position:absolute;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+color:white;
+font-size:30px;
+text-shadow:0 0 10px cyan;
+}
+
+.bubble{
+position:absolute;
+border-radius:50%;
+background:rgba(255,255,255,.35);
+pointer-events:none;
+animation:float 5s linear forwards;
+}
+
+@keyframes float{
+0%{
+transform:translateY(0);
+opacity:1;
+}
+100%{
+transform:translateY(-500px);
+opacity:0;
+}
+}
+
+.star{
+position:absolute;
+width:2px;
+height:2px;
+background:white;
+border-radius:50%;
+animation:twinkle 2s infinite alternate;
+}
+
+@keyframes twinkle{
+from{
+opacity:.2;
+}
+to{
+opacity:1;
+}
+}
+</style>
+
+</head>
+
+<body>
+
+<div id="game">
+
+<div id="title">🌙 ASMR GAME 🌙</div>
+
+<div id="subtitle">
+뽁뽁이 · 물방울 · 말랑볼 · 비누방울 · 새소리
+</div>
+
+<div class="menu">
+
+<button onclick="spawnBubbleWrap()">
+⚪ 뽁뽁이
+</button>
+
+<button onclick="spawnWater()">
+💧 물방울
+</button>
+
+<button onclick="spawnSquishy()">
+⚪ 말랑볼
+</button>
+
+<button onclick="spawnSoap()">
+○ 비누방울
+</button>
+
+<button onclick="spawnBird()">
+🐦 새
+</button>
+
+</div>
+
+<div id="playArea"></div>
+
+<div id="message">
+클릭해서 ASMR을 즐겨보세요.
+</div>
+
+</div>
+
+<script>
+
+const area=document.getElementById("playArea");
+const msg=document.getElementById("message");
+
+for(let i=0;i<120;i++){
+
+const s=document.createElement("div");
+
+s.className="star";
+
+s.style.left=Math.random()*window.innerWidth+"px";
+
+s.style.top=Math.random()*window.innerHeight+"px";
+
+s.style.animationDelay=Math.random()*2+"s";
+
+document.body.appendChild(s);
+
+}
+
+function tone(freq,time){
+
+const ctx=new(window.AudioContext||window.webkitAudioContext)();
+
+const osc=ctx.createOscillator();
+
+const gain=ctx.createGain();
+
+osc.type="sine";
+
+osc.frequency.value=freq;
+
+osc.connect(gain);
+
+gain.connect(ctx.destination);
+
+gain.gain.value=.05;
+
+osc.start();
+
+gain.gain.exponentialRampToValueAtTime(
+0.0001,
+ctx.currentTime+time
+);
+
+osc.stop(ctx.currentTime+time);
+
+}
+
+function randomPos(){
+
+    return {
+        x:Math.random()*(area.clientWidth-80)+20,
+        y:Math.random()*(area.clientHeight-80)+20
+    };
+
+}
+
+function clearItems(){
+
+    area.innerHTML="";
+
+}
+
+function spawnBubbleWrap(){
+
+    clearItems();
+
+    msg.innerText="⚪ 뽁뽁이를 터뜨려 보세요!";
+
+    for(let i=0;i<100;i++){
+
+        const b=document.createElement("div");
+
+        b.className="item";
+
+        b.innerHTML="⚪";
+
+        const p=randomPos();
+
+        b.style.left=p.x+"px";
+        b.style.top=p.y+"px";
+
+        b.style.fontSize="28px";
+
+        b.onclick=function(){
+
+            tone(
+                600+Math.random()*200,
+                0.03
+            );
+
+            this.innerHTML="💥";
+            this.style.transform="scale(1.6)";
+            this.style.pointerEvents="none";
+
+            setTimeout(()=>{
+
+                this.remove();
+
+            },180);
+
+        };
+
+        area.appendChild(b);
+
+    }
+
+}
+
+function spawnWater(){
+
+    clearItems();
+
+    msg.innerText="💧 물방울을 눌러보세요.";
+
+    for(let i=0;i<30;i++){
+
+        const w=document.createElement("div");
+
+        w.className="item";
+
+        w.innerHTML="💧";
+
+        const p=randomPos();
+
+        w.style.left=p.x+"px";
+        w.style.top=p.y+"px";
+
+        w.onclick=function(){
+
+            tone(420,0.25);
+
+            const bubble=document.createElement("div");
+
+            bubble.className="bubble";
+
+            bubble.style.left=this.style.left;
+            bubble.style.top=this.style.top;
+
+            bubble.style.width="25px";
+            bubble.style.height="25px";
+
+            area.appendChild(bubble);
+
+            setTimeout(()=>{
+                bubble.remove();
+            },5000);
+
+        };
+
+        area.appendChild(w);
+
+    }
+
+}
+
+function spawnSquishy(){
+
+    clearItems();
+
+    msg.innerText="⚪ 말랑볼을 눌러보세요.";
+
+    for(let i=0;i<12;i++){
+
+        const ball=document.createElement("div");
+
+        ball.className="item";
+        ball.innerHTML="⚪";
+
+        const p=randomPos();
+
+        ball.style.left=p.x+"px";
+        ball.style.top=p.y+"px";
+        ball.style.fontSize="60px";
+
+        ball.onclick=function(){
+
+            tone(180,0.18);
+
+            this.style.transform="scale(0.65)";
+
+            setTimeout(()=>{
+                this.style.transform="scale(1)";
+            },120);
+
+        };
+
+        area.appendChild(ball);
+
+    }
+
+}
+
+function spawnSoap(){
+
+    clearItems();
+
+    msg.innerText="○ 비누방울을 터뜨려 보세요.";
+
+    for(let i=0;i<35;i++){
+
+        const soap=document.createElement("div");
+
+        soap.className="item";
+        soap.innerHTML="○";
+
+        const p=randomPos();
+
+        soap.style.left=p.x+"px";
+        soap.style.top=p.y+"px";
+
+        soap.onclick=function(){
+
+            tone(900,0.08);
+
+            this.animate([
+                {transform:"scale(1)",opacity:1},
+                {transform:"scale(1.8)",opacity:0}
+            ],{
+                duration:250,
+                fill:"forwards"
+            });
+
+            setTimeout(()=>{
+                this.remove();
+            },250);
+
+        };
+
+        area.appendChild(soap);
+
+    }
+
+}
+
+function spawnBird(){
+
+    clearItems();
+
+    msg.innerText="🐦 새를 클릭해 보세요.";
+
+    const bird=document.createElement("div");
+
+    bird.className="item";
+    bird.innerHTML="🐦";
+    bird.style.left="100px";
+    bird.style.top="100px";
+
+    let dx=3;
+    let dy=2;
+
+    setInterval(()=>{
+
+        let x=parseFloat(bird.style.left);
+        let y=parseFloat(bird.style.top);
+
+        x+=dx;
+        y+=dy;
+
+        if(x<0||x>area.clientWidth-60) dx=-dx;
+        if(y<0||y>area.clientHeight-60) dy=-dy;
+
+        bird.style.left=x+"px";
+        bird.style.top=y+"px";
+
+    },20);
+
+    bird.onclick=function(){
+
+        tone(1200,0.08);
+
+        setTimeout(()=>tone(1400,0.08),80);
+        setTimeout(()=>tone(1600,0.08),160);
+
+    };
+
+    area.appendChild(bird);
+
+}
+
+msg.innerText="왼쪽 메뉴를 눌러 ASMR을 선택하세요.";
+
+</script>
+
+</body>
+</html>
