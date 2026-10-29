@@ -1,0 +1,1108 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>책상 위 금고</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 배치: 고정 시점의 책상 장면이 중심, 단서 노트는 오른쪽(좁은 화면에서는 아래). 따뜻한 색은 스탠드 불빛에만 쓴다. 밤의 서재 한 가지 분위기로 고정. */
+:root{
+  --ink:#0e1417; --wall:#17232a; --lamp:#f2b45e; --paper:#eee2c6; --paper-ink:#2a2418;
+  --brass:#c9a55a; --uv:#b79cff; --panel:#172126; --panel-2:#1f2b31; --line:rgba(255,255,255,.13);
+  --text:#ece6d8; --muted:#9fb0b3; --bad:#e0786a; --ok:#8fd0a2;
+  --f-display:'Gowun Batang','Noto Serif KR',serif;
+  --f-body:'Noto Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo',sans-serif;
+  --f-hand:'Nanum Pen Script','Gowun Batang',cursive;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--ink)}
+body{color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-block:16px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:1120px;margin:0 auto}
+h1,h2,h3{text-wrap:balance}
+p{margin:0}
+button{font:inherit}
+.muted{color:var(--muted)}
+.meta{font-size:.85rem;color:var(--muted)}
+
+.btn{font:500 .9rem var(--f-body);color:var(--text);background:var(--panel-2);border:1px solid var(--line);
+  padding:.5em .95em;border-radius:8px;cursor:pointer;min-height:38px}
+.btn:hover{border-color:var(--brass)}
+.btn:focus-visible,.chip:focus-visible,.rb:focus-visible,.mv:focus-visible{outline:2px solid var(--lamp);outline-offset:2px}
+.btn.primary{background:var(--brass);color:#1a1408;border-color:var(--brass);font-weight:700}
+.btn.primary:hover{background:#d8b86c}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.center{justify-content:center}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.bar h1{font:700 1.2rem var(--f-display);margin:0;letter-spacing:.02em}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.timer{font-variant-numeric:tabular-nums;color:var(--muted);min-width:3.4em;text-align:right}
+
+/* 타이틀 */
+.title{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:32px;align-items:center;padding-block:28px}
+.kicker{font-size:.8rem;letter-spacing:.18em;color:var(--lamp);margin-bottom:10px}
+.title h2{font:700 clamp(2.2rem,7vw,3.6rem)/1.1 var(--f-display);margin:0 0 16px}
+.lead{max-width:34em;color:#cfd6d2;margin-bottom:18px}
+.how{margin:0 0 22px;padding:0;list-style:none;display:grid;gap:6px;color:var(--muted);font-size:.92rem;max-width:34em}
+.how li{padding-left:1.1em;position:relative}
+.how li::before{content:"";position:absolute;left:0;top:.7em;width:6px;height:1px;background:var(--brass)}
+.deco{width:min(100%,360px);justify-self:center}
+.deco svg{width:100%;height:auto;display:block}
+.deco .spin{transform-origin:100px 100px;animation:spin 90s linear infinite}
+@keyframes spin{to{transform:rotate(-360deg)}}
+
+/* 게임 레이아웃 */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+.stage{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0b1114;line-height:0}
+.stage svg{width:100%;height:auto;display:block}
+.item{cursor:pointer}
+.item:focus{outline:none}
+.item .art{transition:transform .15s}
+.item:hover .art,.item:focus-visible .art{filter:url(#hl)}
+.item .tag{opacity:0;transition:opacity .15s;fill:#f6e7c4;font:600 14px var(--f-body);text-anchor:middle;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:4px;pointer-events:none}
+.item:hover .tag,.item:focus-visible .tag{opacity:1}
+.item .badge{opacity:0;transition:opacity .3s;pointer-events:none}
+.item.done .badge{opacity:1}
+
+.notebook{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:14px;min-width:0}
+.notebook h2{font:700 1.05rem var(--f-display);margin:0}
+.inv{display:flex;gap:6px;flex-wrap:wrap;font-size:.85rem}
+.inv .have{border:1px solid var(--uv);color:var(--uv);padding:.1em .6em;border-radius:99px}
+.notes{list-style:none;margin:0;padding:0;display:grid}
+.notes li{display:grid;grid-template-columns:2.2rem minmax(0,1fr);gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:.9rem;align-items:start}
+.notes li:first-child{border-top:0}
+.sym{font:700 1.5rem/1 var(--f-display);text-align:center}
+.sym.red{color:var(--bad)}
+.tagl{font-size:.72rem;color:var(--muted);letter-spacing:.04em;padding-top:.25em;text-align:center;word-break:keep-all}
+.notes.fresh li:last-child{animation:rise .5s ease both}
+
+.items{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+  border-radius:99px;padding:.4em .9em;cursor:pointer;font-size:.88rem;min-height:38px}
+.chip:hover{border-color:var(--brass)}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:#4a5a5f}
+.chip.done .dot{background:var(--ok)}
+
+/* 상세 패널 */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(5,9,11,.8);
+  padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.panel{width:100%;max-width:700px;max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+.panel-head h2{margin:0;font:700 1.15rem var(--f-display)}
+.panel-body{padding:18px;display:grid;gap:16px;min-width:0}
+.panel-foot{padding:12px 16px 16px;border-top:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#pHintText{flex:1 1 220px;font-size:.9rem;color:var(--lamp);min-width:0}
+
+.engr{font:700 1.08rem/1.6 var(--f-display);text-align:center;color:#ead8a6;padding:12px 8px;border-block:1px solid rgba(201,165,90,.4)}
+.cx{display:flex;justify-content:center;gap:8px}
+.ring{display:flex;flex-direction:column;align-items:center;gap:6px}
+.rl{width:clamp(44px,12vw,58px);height:clamp(58px,15vw,72px);display:grid;place-items:center;font:700 clamp(1.5rem,5vw,2rem) var(--f-display);
+  color:#2b1f08;background:linear-gradient(#e6c97f,#b8923f 55%,#8a6a2a);border-radius:8px;border:1px solid #5e4617}
+.rb{width:100%;min-height:34px;background:var(--panel-2);color:var(--brass);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.rb:hover{border-color:var(--brass)}
+.cx.open .rl{background:linear-gradient(#f4e2a8,#d4ad55 55%,#a8832f);box-shadow:0 0 18px rgba(242,180,94,.5)}
+.slip,.sheet{background:var(--paper);color:var(--paper-ink);border-radius:4px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.slip{padding:14px 20px;font:1.7rem/1.3 var(--f-hand);animation:rise .5s ease both;white-space:pre-line}
+.sheet{padding:20px 22px;font:1.65rem/1.4 var(--f-hand);white-space:pre-line;transition:background .3s,color .3s,box-shadow .3s}
+.sheet.uv-on{background:#221938;color:#4a3f66;box-shadow:0 0 0 1px var(--uv),0 0 40px rgba(167,139,255,.35)}
+.uvt{margin-top:14px;color:#d6c8ff;text-shadow:0 0 10px rgba(183,156,255,.95),0 0 22px rgba(183,156,255,.6)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.cubeview{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:center}
+.net{--st:clamp(22px,7vw,34px);display:grid;grid-template-columns:repeat(4,auto);grid-template-rows:repeat(3,auto);gap:5px;justify-content:center}
+.face{position:relative;display:grid;grid-template-columns:var(--st) var(--st);gap:2px}
+.face i{display:block;width:var(--st);height:var(--st);border-radius:4px}
+.face b{position:absolute;inset:0;display:grid;place-items:center;font:700 .8rem var(--f-body);color:rgba(0,0,0,.35);pointer-events:none}
+.c3d{flex:0 1 290px;width:min(100%,290px);height:auto;display:block;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}.c3d:active{cursor:grabbing}.c3d .stk{cursor:pointer}.c3d:focus-visible{outline:2px solid var(--lamp);outline-offset:4px;border-radius:12px}
+.moves{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.mv{min-height:44px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer;font:700 1rem var(--f-body)}
+.mv:hover{border-color:var(--brass)}
+
+.cal{background:var(--paper);color:var(--paper-ink);border-radius:6px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.cal h3{margin:0;background:#b7473b;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;font:700 1.1rem var(--f-display)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-grid span{min-height:46px;border:1px solid #d3c7a8;padding:3px 4px;font-size:.88rem}
+.cal-grid .wd{min-height:0;font-weight:700;text-align:center;background:#e0d4b4;font-size:.8rem}
+.cal-grid .sun,.cal-grid .sun b{color:#b7473b}
+.cal-grid small{display:block;color:#b7473b;font-size:.6rem;line-height:1.2}
+.cal .scrawl{padding:12px 16px 16px;font:1.7rem/1.3 var(--f-hand);white-space:pre-line}
+
+.mirror{width:min(78vw,300px);margin:0 auto}
+.mirror svg{width:100%;height:auto;display:block;transform:scaleX(-1)}
+.engrave{text-align:center;font:700 1.1rem var(--f-display);color:#ead8a6}
+
+.cards{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.card{width:clamp(62px,17vw,84px);aspect-ratio:5/7.2;background:#f4efe2;border-radius:7px;border:1px solid #bfb7a2;color:#1d1d1d;position:relative;display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.4)}
+.card.red{color:#b73a2d}
+.card .r{position:absolute;left:7px;top:5px;font:700 1rem/1 var(--f-display)}
+.card .r2{position:absolute;right:7px;bottom:5px;font:700 1rem/1 var(--f-display);transform:rotate(180deg)}
+.card .s{font-size:2.3rem;line-height:1}
+
+.pens svg{width:min(100%,280px);display:block;margin:0 auto}
+
+.safe{width:min(100%,360px);display:block;margin:0 auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.safe:active{cursor:grabbing}
+.safe:focus-visible{outline:2px solid var(--lamp);outline-offset:4px;border-radius:16px}
+.readout{display:flex;justify-content:center;align-items:baseline;gap:10px}
+.readout output{font:700 2.2rem var(--f-display);min-width:2.2em;text-align:center;font-variant-numeric:tabular-nums;color:var(--lamp)}
+.leds{display:flex;justify-content:center;gap:10px}
+.led{width:58px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:#0f1519;font:700 1.2rem var(--f-display);color:var(--muted);font-variant-numeric:tabular-nums}
+.led.on{color:var(--text);border-color:var(--brass)}
+.shake{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+#sMsg{text-align:center;min-height:1.6em}
+
+.opened{display:grid;place-items:center;gap:14px;text-align:center}
+.vault{position:relative;width:min(100%,300px);aspect-ratio:1;perspective:900px}
+.vault .in{position:absolute;inset:6%;border-radius:12px;background:#0b1012;border:3px solid #3a474d;display:grid;place-items:center}
+.vault .photo{width:44%;aspect-ratio:4/5;background:#e9dfc6;border-radius:3px;transform:rotate(-6deg);box-shadow:0 4px 10px #000a;display:grid;place-items:center}
+.vault .photo::after{content:"";width:62%;height:56%;background:#8a7d5e;opacity:.5;border-radius:2px}
+.vault .dr{position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,#6f7d84,#2d373c);border:3px solid #0c1113;transform-origin:left center;animation:swing 1.1s ease-out forwards}
+@keyframes swing{to{transform:rotateY(-112deg)}}
+
+.end{max-width:640px;margin:6vh auto;display:grid;gap:18px;text-align:center;justify-items:center}
+.end h2{font:700 clamp(2rem,6vw,3rem) var(--f-display);margin:0}
+.end .sheet{text-align:left;width:100%}
+.stats{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;color:var(--muted)}
+.stats b{display:block;font:700 1.6rem var(--f-display);color:var(--text);font-variant-numeric:tabular-nums}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:70;
+  max-width:min(92vw,520px);background:#0b1114;border:1px solid var(--brass);color:var(--text);padding:.7em 1.1em;border-radius:10px;font-size:.92rem;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+
+#tray{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:max(14px,env(safe-area-inset-bottom,0px));z-index:65;background:rgba(11,17,20,.92);border:1px solid var(--brass);border-radius:14px;padding:8px 10px 10px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#tray .tl{display:block;font-size:.72rem;color:var(--muted);margin-bottom:6px;letter-spacing:.04em}
+#trayItems{display:flex;gap:8px}
+.ti{width:52px;height:52px;border-radius:50%;background:var(--panel-2);border:1px solid var(--brass);display:grid;place-items:center;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;padding:0}
+.ti:hover{box-shadow:0 0 14px rgba(242,180,94,.45)}
+.ti svg{width:34px;height:34px;pointer-events:none}
+.ghost{position:fixed;z-index:90;width:56px;height:56px;margin:-28px 0 0 -28px;pointer-events:none;border-radius:50%;background:var(--panel-2);border:2px solid var(--lamp);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.6);opacity:.95}
+.ghost svg{width:36px;height:36px}
+.item.hot .art{filter:url(#hl)}.item.hot .tag{opacity:1}
+[data-drop].hot{outline:2px dashed var(--lamp);outline-offset:3px}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .title{grid-template-columns:minmax(0,1fr)}
+  .deco{width:200px;order:-1}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <h1>책상 위 금고</h1>
+    <div class="tools" id="tools" hidden>
+      <span class="timer" id="timer" aria-label="경과 시간">00:00</span>
+      <button class="btn" id="btnHint">힌트</button>
+      <button class="btn" id="btnSound" aria-pressed="true">소리 켜짐</button>
+      <button class="btn" id="btnReset">처음부터</button>
+    </div>
+  </header>
+
+  <!-- 1. 타이틀 -->
+  <section id="sTitle" class="title">
+    <div>
+      <p class="kicker">서재 · 깊은 밤</p>
+      <h2>책상 위 금고</h2>
+      <p class="lead">할아버지가 떠난 뒤 비워 둔 서재. 스탠드 불빛 아래 작은 금고 하나와 일곱 가지 물건이 놓여 있다. 금고를 열 숫자와 그 순서는 책상 위 물건들 안에 숨어 있다.</p>
+      <ul class="how">
+        <li>책상 위 물건을 눌러 가까이 살펴본다. 시점은 의자에 앉은 그대로 고정이다.</li>
+        <li>알아낸 단서는 오른쪽 노트에 적힌다. 계산과 추리는 직접 한다.</li>
+        <li>금고 다이얼은 끌어서 돌리거나 버튼으로 맞춘다. 숫자는 0부터 39까지다.</li><li>얻은 물건은 우측 하단 가방에 담긴다. 아이콘을 끌어다 쓸 곳에 놓는다.</li>
+      </ul>
+      <div class="row">
+        <button class="btn primary" id="btnStart">서재에 앉는다</button>
+        <button class="btn" id="btnContinue" hidden>이어서 하기</button>
+      </div>
+    </div>
+    <div class="deco" aria-hidden="true">
+      <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="98" fill="#11181b" stroke="#c9a55a" stroke-width="2"/><g class="spin" id="decoDial"></g><circle cx="100" cy="100" r="30" fill="#2a3338" stroke="#c9a55a"/><path d="M94 4h12l-6 12z" fill="#f2b45e"/></svg>
+    </div>
+  </section>
+
+  <!-- 2. 책상 장면 -->
+  <main id="sGame" hidden>
+    <div class="layout">
+      <div class="stage">
+        <svg id="scene" viewBox="0 0 1000 640" role="group" aria-label="서재 책상 장면">
+          <defs>
+            <linearGradient id="gWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d151a"/><stop offset="1" stop-color="#1b2a31"/></linearGradient>
+            <linearGradient id="gDesk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#412819"/><stop offset=".5" stop-color="#5b3a24"/><stop offset="1" stop-color="#37220f"/></linearGradient>
+            <radialGradient id="gPool" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#f2b45e" stop-opacity=".4"/><stop offset=".6" stop-color="#f2b45e" stop-opacity=".12"/><stop offset="1" stop-color="#f2b45e" stop-opacity="0"/></radialGradient>
+            <linearGradient id="gCone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2b45e" stop-opacity=".22"/><stop offset="1" stop-color="#f2b45e" stop-opacity="0"/></linearGradient>
+            <radialGradient id="gVig" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+            <linearGradient id="gBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2c27a"/><stop offset=".5" stop-color="#b8923f"/><stop offset="1" stop-color="#7e6026"/></linearGradient>
+            <linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#76848b"/><stop offset=".5" stop-color="#4a575d"/><stop offset="1" stop-color="#2d373c"/></linearGradient>
+            <filter id="hl" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
+              <feFlood flood-color="#f2b45e" flood-opacity=".95"/>
+              <feComposite in2="b" operator="in" result="g"/>
+              <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <g id="bdg"><circle r="10" fill="#2f6b48" stroke="#0e1417" stroke-width="2"/><path d="M-4.5 .5L-1.5 3.5L4.5-3.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+          </defs>
+
+          <!-- 벽 -->
+          <rect width="1000" height="310" fill="url(#gWall)"/>
+          <rect x="760" y="40" width="150" height="190" rx="4" fill="#0a131a" stroke="#2b3b44" stroke-width="6"/>
+          <path d="M835 40V230M760 135H910" stroke="#2b3b44" stroke-width="4"/>
+          <circle cx="800" cy="88" r="17" fill="#d8dfe6" opacity=".85"/><circle cx="808" cy="84" r="15" fill="#0a131a"/>
+          <rect x="300" y="70" width="86" height="104" fill="#0c1317" stroke="#3a2b1c" stroke-width="6"/>
+          <path d="M312 156l22-30 18 20 12-14 12 24z" fill="#223038"/>
+          <rect y="286" width="1000" height="14" fill="#101920"/>
+
+          <!-- 책상 -->
+          <rect y="298" width="1000" height="342" fill="url(#gDesk)"/>
+          <rect y="296" width="1000" height="5" fill="#25160b"/>
+          <g stroke="#000" stroke-opacity=".13" fill="none" stroke-width="2">
+            <path d="M0 336C300 328 700 346 1000 334"/><path d="M0 420C320 410 680 430 1000 416"/><path d="M0 520C300 512 700 530 1000 516"/><path d="M0 610C320 602 680 620 1000 606"/>
+          </g>
+          <rect x="70" y="392" width="860" height="226" rx="12" fill="#21332d"/>
+          <rect x="80" y="402" width="840" height="206" rx="8" fill="none" stroke="#c9a55a" stroke-opacity=".28" stroke-dasharray="5 5"/>
+          <ellipse cx="360" cy="440" rx="560" ry="250" fill="url(#gPool)"/>
+
+          <!-- 스탠드 -->
+          <ellipse cx="140" cy="322" rx="48" ry="11" fill="#150f0b"/>
+          <ellipse cx="140" cy="316" rx="44" ry="10" fill="url(#gBrass)"/>
+          <rect x="134" y="196" width="12" height="120" fill="url(#gBrass)"/>
+          <path d="M96 204L184 204L340 430L-60 430Z" fill="url(#gCone)"/>
+          <rect x="66" y="128" width="148" height="72" rx="30" fill="#1f5c47"/>
+          <rect x="76" y="136" width="128" height="14" rx="7" fill="#fff" opacity=".13"/>
+          <ellipse cx="140" cy="204" rx="62" ry="12" fill="#f2b45e" opacity=".75"/>
+
+          <!-- 금고 -->
+          <g class="item" data-id="safe" tabindex="0" role="button" aria-label="금고">
+            <g class="art">
+              <rect x="404" y="176" width="192" height="188" rx="10" fill="url(#gSteel)" stroke="#0c1113" stroke-width="3"/>
+              <rect x="418" y="190" width="164" height="160" rx="6" fill="#2a3338" stroke="#6b787e" stroke-opacity=".5"/>
+              <circle cx="500" cy="268" r="54" fill="#11171a" stroke="url(#gBrass)" stroke-width="4"/>
+              <g id="miniDial"></g>
+              <circle cx="500" cy="268" r="20" fill="url(#gBrass)" stroke="#5e4617"/>
+              <path d="M494 206h12l-6 12z" fill="#f2b45e"/>
+              <rect x="556" y="322" width="16" height="22" rx="3" fill="url(#gBrass)"/>
+              <rect x="410" y="364" width="26" height="8" rx="2" fill="#10171a"/><rect x="564" y="364" width="26" height="8" rx="2" fill="#10171a"/>
+            </g>
+            <rect x="396" y="168" width="208" height="210" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="500" y="160">금고</text>
+            <use class="badge" href="#bdg" x="590" y="184"/>
+          </g>
+
+          <!-- 연필꽂이 -->
+          <g class="item" data-id="pens" tabindex="0" role="button" aria-label="연필꽂이">
+            <g class="art">
+              <g stroke-linecap="round">
+                <line x1="268" y1="324" x2="254" y2="270" stroke="#c8473b" stroke-width="5"/>
+                <line x1="280" y1="324" x2="283" y2="262" stroke="#3b6fc8" stroke-width="5"/>
+                <line x1="292" y1="324" x2="306" y2="274" stroke="#2c2c2c" stroke-width="5"/>
+                <g id="uvPen"><line x1="286" y1="324" x2="318" y2="286" stroke="#7f63d6" stroke-width="4"/><circle cx="318" cy="286" r="3" fill="#e1d6ff"/></g>
+              </g>
+              <path d="M252 318h56l-5 58q-1 6-7 6h-32q-6 0-7-6z" fill="#2f3d44" stroke="#0e1417"/>
+              <path d="M255 338h50M257 356h46" stroke="#c9a55a" stroke-opacity=".4"/>
+            </g>
+            <rect x="238" y="250" width="94" height="140" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="285" y="244">연필꽂이</text>
+            <use class="badge" href="#bdg" x="322" y="330"/>
+          </g>
+
+          <!-- 달력 -->
+          <g class="item" data-id="calendar" tabindex="0" role="button" aria-label="탁상 달력">
+            <g class="art">
+              <polygon points="708,308 808,308 816,390 700,390" fill="#ece2c9" stroke="#b9ad8e"/>
+              <polygon points="708,308 808,308 810,328 706,328" fill="#b7473b"/>
+              <text x="758" y="322" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="Noto Sans KR, sans-serif">10월</text>
+              <path d="M712 342H806M711 355H807M710 368H808M709 380H809" stroke="#b5aa8e" stroke-width="1.2"/>
+              <path d="M730 332V388M754 332V388M778 332V388" stroke="#cbbf9f" stroke-width="1"/>
+              <circle cx="728" cy="308" r="4" fill="#2a2418"/><circle cx="788" cy="308" r="4" fill="#2a2418"/>
+            </g>
+            <rect x="694" y="298" width="130" height="100" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="758" y="292">탁상 달력</text>
+            <use class="badge" href="#bdg" x="812" y="312"/>
+          </g>
+
+          <!-- 손거울 -->
+          <g class="item" data-id="mirror" tabindex="0" role="button" aria-label="손거울">
+            <g class="art">
+              <path d="M884 458L903 520" stroke="url(#gBrass)" stroke-width="12" stroke-linecap="round"/>
+              <circle cx="880" cy="418" r="46" fill="url(#gBrass)"/>
+              <circle cx="880" cy="418" r="38" fill="#26414d"/>
+              <circle cx="880" cy="418" r="27" fill="#cbd9d8"/>
+              <path d="M880 418L866.600 422.200M880 418L890 435.300" stroke="#1d2a30" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="880" cy="418" r="2.5" fill="#1d2a30"/>
+              <path d="M852 398q14-16 34-14" stroke="#fff" opacity=".35" stroke-width="4" fill="none" stroke-linecap="round"/>
+            </g>
+            <rect x="826" y="364" width="112" height="162" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="882" y="358">손거울</text>
+            <use class="badge" href="#bdg" x="920" y="384"/>
+          </g>
+
+          <!-- 크립텍스 -->
+          <g class="item" data-id="cryptex" tabindex="0" role="button" aria-label="크립텍스">
+            <g class="art">
+              <ellipse cx="226" cy="530" rx="120" ry="9" fill="#000" opacity=".3"/>
+              <rect x="112" y="466" width="226" height="56" rx="10" fill="url(#gBrass)" stroke="#5e4617"/>
+              <g fill="#8a6a2a" stroke="#d8b868">
+                <rect x="150" y="463" width="30" height="62" rx="5"/><rect x="184" y="463" width="30" height="62" rx="5"/><rect x="218" y="463" width="30" height="62" rx="5"/><rect x="252" y="463" width="30" height="62" rx="5"/><rect x="286" y="463" width="30" height="62" rx="5"/>
+              </g>
+              <g font-size="18" font-weight="700" fill="#f1dfae" text-anchor="middle" font-family="Gowun Batang, serif">
+                <text x="165" y="501">K</text><text x="199" y="501">T</text><text x="233" y="501">R</text><text x="267" y="501">B</text><text x="301" y="501">E</text>
+              </g>
+              <circle cx="120" cy="494" r="8" fill="#6a5020"/><circle cx="330" cy="494" r="8" fill="#6a5020"/>
+            </g>
+            <rect x="104" y="454" width="244" height="80" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="226" y="448">크립텍스</text>
+            <use class="badge" href="#bdg" x="338" y="468"/>
+          </g>
+
+          <!-- 큐브 -->
+          <g class="item" data-id="cube" tabindex="0" role="button" aria-label="2×2 큐브">
+            <g class="art">
+              <ellipse cx="400" cy="562" rx="48" ry="8" fill="#000" opacity=".3"/>
+              <g id="deskCube" transform="translate(400 512)"></g>
+            </g>
+            <rect x="350" y="462" width="100" height="108" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="400" y="456">2×2 큐브</text>
+            <use class="badge" href="#bdg" x="446" y="470"/>
+          </g>
+
+          <!-- 편지 -->
+          <g class="item" data-id="letter" tabindex="0" role="button" aria-label="편지">
+            <g class="art" transform="rotate(-5 590 520)">
+              <rect x="508" y="446" width="166" height="104" fill="#f3e9cf" stroke="#c9bb97"/>
+              <path d="M522 466h138M522 482h120M522 498h132M522 514h96" stroke="#8a7d5e" stroke-opacity=".55" stroke-width="2"/>
+              <rect x="490" y="494" width="200" height="96" rx="3" fill="#d8c79c" stroke="#a8966a"/>
+              <path d="M490 494L590 548L690 494" fill="#cdbb8d" stroke="#a8966a"/>
+              <circle cx="590" cy="548" r="13" fill="#9b2d2d"/><circle cx="586" cy="544" r="4" fill="#fff" opacity=".25"/>
+            </g>
+            <rect x="478" y="434" width="230" height="168" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="590" y="428">편지</text>
+            <use class="badge" href="#bdg" x="696" y="452"/>
+          </g>
+
+          <!-- 카드 -->
+          <g class="item" data-id="cards" tabindex="0" role="button" aria-label="트럼프 카드">
+            <g class="art" id="deskCards"></g>
+            <rect x="728" y="524" width="240" height="98" fill="#000" fill-opacity="0"/>
+            <text class="tag" x="850" y="518">트럼프 카드</text>
+            <use class="badge" href="#bdg" x="962" y="538"/>
+          </g>
+
+          <rect width="1000" height="640" fill="url(#gVig)" pointer-events="none"/>
+        </svg>
+      </div>
+
+      <aside class="notebook" aria-label="단서 노트">
+        <h2>단서 노트</h2>
+        <div class="inv" id="inv"></div>
+        <ol class="notes" id="noteList"></ol>
+        <p class="meta" id="noteEmpty">조사한 단서가 여기에 기록됩니다.</p>
+      </aside>
+    </div>
+    <nav class="items" id="itemNav" aria-label="책상 위 물건"></nav>
+  </main>
+
+  <!-- 3. 엔딩 -->
+  <section id="sEnd" hidden>
+    <div class="end">
+      <p class="kicker">금고가 열렸다</p>
+      <h2>할아버지의 서재</h2>
+      <div class="sheet" id="endNote"></div>
+      <div class="stats"><div><b id="stTime">00:00</b>걸린 시간</div><div><b id="stHint">0</b>힌트 사용</div></div>
+      <button class="btn primary" id="btnAgain">처음부터 다시 하기</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="pTitle">
+    <div class="panel-head"><h2 id="pTitle"></h2><button class="btn" id="pClose">돌아가기</button></div>
+    <div class="panel-body" id="pBody"></div>
+    <div class="panel-foot"><button class="btn" id="pHintBtn">힌트</button><p id="pHintText" role="status"></p></div>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="tray" hidden><span class="tl">가방 · 끌어서 사용</span><div id="trayItems"></div></div>
+
+<script>
+(function(){
+'use strict';
+
+// ==ENGINE_START==
+const COLORS={U:'#f2f2ec',D:'#f0c93a',F:'#3fa56a',B:'#3a6fd0',R:'#d2493e',L:'#ee8a2f'};
+function FACE_OF(n){ if(n[1]===1)return'U'; if(n[1]===-1)return'D'; if(n[2]===1)return'F'; if(n[2]===-1)return'B'; if(n[0]===1)return'R'; return'L'; }
+function solvedCube(){
+  const st=[];
+  for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1]){
+    st.push({p:[x,y,z],n:[x,0,0],c:x===1?'R':'L'});
+    st.push({p:[x,y,z],n:[0,y,0],c:y===1?'U':'D'});
+    st.push({p:[x,y,z],n:[0,0,z],c:z===1?'F':'B'});
+  }
+  return st;
+}
+const ROT={
+  x:{cw:v=>[v[0],v[2],-v[1]],ccw:v=>[v[0],-v[2],v[1]]},
+  y:{cw:v=>[-v[2],v[1],v[0]],ccw:v=>[v[2],v[1],-v[0]]},
+  z:{cw:v=>[v[1],-v[0],v[2]],ccw:v=>[-v[1],v[0],v[2]]}
+};
+const AX={U:1,R:0,F:2}, AXN=['x','y','z'];
+function applyMove(st,mv){
+  const inv=mv.length>1, ai=AX[mv[0]], f=ROT[AXN[ai]][inv?'ccw':'cw'];
+  return st.map(s=>s.p[ai]===1?{p:f(s.p),n:f(s.n),c:s.c}:s);
+}
+function inverseSeq(seq){return seq.slice().reverse().map(m=>m.length>1?m[0]:m+"'");}
+function isSolved(st){
+  const col={};
+  for(const s of st){const f=FACE_OF(s.n); if(col[f]===undefined)col[f]=s.c; else if(col[f]!==s.c)return false;}
+  return true;
+}
+const SCRAMBLE=["R","U'","F"];
+function netCell(s){
+  const x=s.p[0],y=s.p[1],z=s.p[2],f=FACE_OF(s.n);
+  let c,r;
+  switch(f){
+    case 'F': c=(x+1)/2; r=(1-y)/2; break;
+    case 'B': c=(1-x)/2; r=(1-y)/2; break;
+    case 'U': c=(x+1)/2; r=(1+z)/2; break;
+    case 'D': c=(x+1)/2; r=(1-z)/2; break;
+    case 'R': c=(1-z)/2; r=(1-y)/2; break;
+    default:  c=(1+z)/2; r=(1-y)/2;
+  }
+  return {f:f,c:c,r:r};
+}
+function isoPolys(st,s){
+  const P=(x,y,z)=>[(x-z)*0.866*s,(x+z)*0.5*s-y*s];
+  const out=[];
+  for(const k of st){
+    const ai=k.n[0]!==0?0:(k.n[1]!==0?1:2);
+    if(k.n[ai]!==1)continue;
+    const o=[0,1,2].filter(i=>i!==ai), b=o[0], c=o[1];
+    const rng=i=>k.p[i]===1?[0,1]:[-1,0];
+    const rb=rng(b), rc=rng(c);
+    const cor=[[rb[0],rc[0]],[rb[1],rc[0]],[rb[1],rc[1]],[rb[0],rc[1]]];
+    const pts=cor.map(uv=>{const q=[0,0,0]; q[ai]=1; q[b]=uv[0]; q[c]=uv[1]; return P(q[0],q[1],q[2]);});
+    out.push({pts:pts,c:k.c});
+  }
+  return out;
+}
+// ==ENGINE_END==
+
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const mod=(a,n)=>((a%n)+n)%n;
+const scrambled=()=>SCRAMBLE.reduce(applyMove,solvedCube());
+
+/* ---------- 데이터 ---------- */
+const SAFE_CODE=[16,15,23,35];
+const LETTER=`사랑하는 손주에게,
+
+네가 이 편지를 읽고 있다면 서재에 다시 앉았다는 뜻이겠구나.
+책상 위의 작은 금고는 숫자 네 개로 열린단다.
+숫자는 물건마다 하나씩, 무늬를 하나씩 달고 숨어 있어.
+무늬는 순서의 열쇠란다. 순서는 카드가 일러 줄 거야.
+
+서두르지 말고, 하나씩 들여다보렴.
+— 할아버지가`;
+const UVTEXT=`카드는 오른쪽에서 왼쪽으로 읽거라.
+카드에 적힌 숫자는 잊고, 무늬만 보아라.`;
+const ENDNOTE=`금고 안에는 오래된 사진 한 장과 쪽지가 들어 있었다. 사진 속에서는 어린 네가 이 책상에 앉아 있다.
+
+쪽지에는 이렇게 적혀 있었다.
+숫자보다 소중한 건 하나씩 들여다보던 그 시간이란다. 수고했다, 내 손주.`;
+const NOTES={
+  letter:{tag:'편지',text:'숫자는 네 개. 숫자마다 무늬가 하나씩 붙어 있다. 순서는 카드가 알려 준다.'},
+  uv:{tag:'편지 UV',text:'카드는 오른쪽에서 왼쪽으로 읽는다. 카드의 숫자는 잊고 무늬만 본다.'},
+  cards:{tag:'카드',text:'왼쪽에서 오른쪽으로 ♣ ♥ ♦ ♠ 순서로 놓여 있다.'},
+  spade:{sym:'♠',text:'흰 이빨의 수 − 검은 이빨의 수. 이빨은 모두 88개이고 검은 이빨은 36개.'},
+  heart:{sym:'♥',red:1,text:'조각의 수 × 3 − 1. 조각은 모두 8개.'},
+  diamond:{sym:'♦',red:1,text:'네가 태어난 날. 달력은 2026년 10월.'},
+  diamond2:{sym:'♦',red:1,text:'달력 귀퉁이의 작은 글씨: 10월의 셋째 목요일.'},
+  club:{sym:'♣',text:'진짜 시각의 "분". 거울에는 벽시계가 좌우로 뒤집혀 비친다.'}
+};
+const ITEMS=[
+  {id:'safe',name:'금고'},{id:'letter',name:'편지'},{id:'pens',name:'연필꽂이'},{id:'cryptex',name:'크립텍스'},
+  {id:'cube',name:'2×2 큐브'},{id:'calendar',name:'탁상 달력'},{id:'mirror',name:'손거울'},{id:'cards',name:'트럼프 카드'}
+];
+const DONE={
+  safe:()=>S.won, letter:()=>S.uvRead, pens:()=>S.have.uv, cryptex:()=>S.solved.cryptex,
+  cube:()=>S.solved.cube, calendar:()=>!!S.lensCal, mirror:()=>!!S.seen.mirror, cards:()=>!!S.seen.cards
+};
+
+/* ---------- 상태 ---------- */
+const KEY='desk-safe-v1';
+const fresh=()=>({started:false,elapsed:0,have:{uv:false,lens:false,key:false},lensCal:false,keyUsed:false,solved:{cryptex:false,cube:false},seen:{},uvRead:false,notes:[],hints:0,won:false});
+function load(){try{const r=localStorage.getItem(KEY); if(!r)return null; const d=JSON.parse(r); return Object.assign(fresh(),d);}catch(e){return null;}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+let S=load()||fresh();
+if(S.won)S=fresh();
+let cube=S.solved.cube?solvedCube():scrambled();
+let cxL=S.solved.cryptex?['P','I','A','N','O']:['K','T','R','B','E'];
+let hist=[];
+let theta=0, entered=[], lockedInput=false;
+
+/* ---------- 유틸 ---------- */
+let toastTimer=null;
+function toast(msg,ms){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),ms||3500);
+}
+let ac=null, soundOn=true;
+function beep(f,d,v,type){
+  if(!soundOn)return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime;
+    o.type=type||'square'; o.frequency.value=f||1600; v=v||.04; d=d||.035;
+    o.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.start(t); o.stop(t+d+.01);
+  }catch(e){}
+}
+function chime(){beep(660,.25,.06,'sine'); setTimeout(()=>beep(990,.35,.05,'sine'),140);}
+const fmt=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+
+function dialMarkup(cx,cy,R,nums){
+  const k=R/118; let s='';
+  for(let n=0;n<40;n++){
+    const a=-9*n, long=n%5===0, y1=cy-R+4*k, y2=y1+(long?16*k:9*k);
+    s+=`<line x1="${cx}" y1="${y1}" x2="${cx}" y2="${y2}" stroke="${long?'#e8dcc0':'#9a9078'}" stroke-width="${(long?2.2:1.2)*k}" transform="rotate(${a} ${cx} ${cy})"/>`;
+    if(nums&&long)s+=`<text x="${cx}" y="${cy-R+38*k}" text-anchor="middle" font-size="${15*k}" font-weight="700" fill="#e8dcc0" font-family="Noto Sans KR, sans-serif" transform="rotate(${a} ${cx} ${cy})">${n}</text>`;
+  }
+  return s;
+}
+
+/* ---------- 화면 전환 ---------- */
+function showScreen(name){
+  $('#sTitle').hidden=name!=='title';
+  $('#sGame').hidden=name!=='game';
+  $('#sEnd').hidden=name!=='end';
+  $('#tools').hidden=name!=='game'; renderTray();
+}
+
+/* ---------- 렌더 ---------- */
+function renderNotes(){
+  $('#noteList').innerHTML=S.notes.map(k=>{
+    const n=NOTES[k];
+    const lead=n.sym?`<span class="sym${n.red?' red':''}">${n.sym}</span>`:`<span class="tagl">${n.tag}</span>`;
+    return `<li>${lead}<span>${n.text}</span></li>`;
+  }).join('');
+  $('#noteEmpty').hidden=S.notes.length>0;
+}
+function renderInv(){
+  if(S.solved.cryptex&&!S.have.lens)S.have.lens=true; if(S.solved.cube&&!S.have.key&&!S.keyUsed)S.have.key=true;
+  const own=[S.have.uv&&'UV 펜라이트',S.have.lens&&'돋보기',S.have.key&&!S.keyUsed&&'놋쇠 열쇠'].filter(Boolean);
+  $('#inv').innerHTML=own.length?own.map(n=>`<span class='have'>${n}</span>`).join(''):`<span class='muted'>가진 물건 없음</span>`;
+  const pen=$('#uvPen'); if(pen)pen.style.display=S.have.uv?'none':'';
+}
+function renderDone(){
+  ITEMS.forEach(it=>{
+    const d=DONE[it.id]();
+    const g=$(`.item[data-id="${it.id}"]`); if(g)g.classList.toggle('done',d);
+    const c=$(`.chip[data-id="${it.id}"]`); if(c)c.classList.toggle('done',d);
+  });
+}
+function renderDeskCube(){
+  $('#deskCube').innerHTML=isoPolys(cube,22).map(p=>`<polygon points="${p.pts.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ')}" fill="${COLORS[p.c]}" stroke="#0d1113" stroke-width="1.3" stroke-linejoin="round"/>`).join('');
+}
+function renderTimer(){$('#timer').textContent=fmt(S.elapsed);}
+function renderAll(){renderNotes();renderInv();renderDone();renderDeskCube();renderTimer();renderTray();}
+/* ---------- 가방 (끌어서 사용) ---------- */
+const ICON={
+  lens:"<svg viewBox='0 0 40 40'><circle cx='17' cy='17' r='10' fill='#9fd4e0' fill-opacity='.25' stroke='#e2c27a' stroke-width='3'/><path d='M25 25L35 35' stroke='#c9a55a' stroke-width='5' stroke-linecap='round'/><path d='M11 14q3-5 8-4' stroke='#fff' stroke-opacity='.6' stroke-width='2' fill='none' stroke-linecap='round'/></svg>",
+  key:"<svg viewBox='0 0 40 40'><circle cx='12' cy='14' r='7' fill='none' stroke='#e2c27a' stroke-width='3.5'/><path d='M17 19L34 36M28 30l4-4M32 34l4-4' stroke='#e2c27a' stroke-width='3.5' stroke-linecap='round'/></svg>"
+};
+const ILABEL={lens:'돋보기',key:'놋쇠 열쇠'};
+function trayList(){return [S.have.lens&&'lens',S.have.key&&!S.keyUsed&&'key'].filter(Boolean);}
+function renderTray(){
+  const l=trayList();
+  $('#tray').hidden=$('#sGame').hidden||!l.length;
+  $('#trayItems').innerHTML=l.map(k=>`<button class='ti' data-k='${k}' aria-label='${ILABEL[k]}' title='${ILABEL[k]}'>${ICON[k]}</button>`).join('');
+}
+function giveItem(k){S.have[k]=true; save(); renderTray(); toast(`${ILABEL[k]} 획득! 우측 하단 가방에서 끌어다 쓸 곳에 대 보자.`,5500);}
+function dropTarget(x,y){
+  const el=document.elementFromPoint(x,y); if(!el)return null;
+  const d=el.closest('[data-drop]'); if(d)return d;
+  return $('#overlay').hidden?el.closest('.item'):null;
+}
+function useItem(k,t){
+  if(k==='lens'&&t==='calendar'){
+    const first=!S.lensCal; S.lensCal=true; openItem('calendar');
+    if(first){addNote('diamond2'); chime(); toast('작은 글씨가 또렷해졌다.');}
+    save(); renderAll(); return;
+  }
+  if(k==='key'&&t==='safe'){S.keyUsed=true; save(); chime(); toast('철컥. 덮개가 열렸다.'); openItem('safe'); return;}
+  beep(200,.15,.05,'sawtooth'); toast('여기에는 쓸 수 없는 것 같다.');
+}
+function initTray(){
+  const tr=$('#trayItems'); let g=null,hot=null,key=null,sx=0,sy=0;
+  const clr=()=>{if(hot){hot.classList.remove('hot'); hot=null;}};
+  const mv=e=>{
+    if(!g)return; g.style.left=e.clientX+'px'; g.style.top=e.clientY+'px';
+    const t=dropTarget(e.clientX,e.clientY); if(t!==hot){clr(); hot=t; if(t)t.classList.add('hot');}
+  };
+  tr.addEventListener('pointerdown',e=>{
+    const b=e.target.closest('.ti'); if(!b)return; e.preventDefault();
+    key=b.dataset.k; sx=e.clientX; sy=e.clientY;
+    g=b.cloneNode(true); g.className='ghost'; document.body.appendChild(g); mv(e);
+    try{tr.setPointerCapture(e.pointerId);}catch(x){}
+  });
+  tr.addEventListener('pointermove',mv);
+  const up=e=>{
+    if(!g)return;
+    const t=dropTarget(e.clientX,e.clientY), k=key; g.remove(); g=null; key=null; clr();
+    if(t)useItem(k,t.dataset.drop||t.dataset.id);
+    else if(Math.hypot(e.clientX-sx,e.clientY-sy)<8)toast('아이콘을 끌어다 쓸 곳에 놓아 보자.');
+  };
+  tr.addEventListener('pointerup',up); tr.addEventListener('pointercancel',up);
+}
+function addNote(k){
+  if(S.notes.includes(k))return;
+  S.notes.push(k); renderNotes(); save();
+  const ol=$('#noteList'); ol.classList.remove('fresh'); void ol.offsetWidth; ol.classList.add('fresh');
+}
+
+/* ---------- 카드 (책상 장면) ---------- */
+const CARDS=[{r:'7',s:'♣',red:0},{r:'K',s:'♥',red:1},{r:'3',s:'♦',red:1},{r:'A',s:'♠',red:0}];
+function buildDeskCards(){
+  const rot=[-4,2,-1,3];
+  $('#deskCards').innerHTML=CARDS.map((c,i)=>{
+    const x=736+i*58, y=534, col=c.red?'#b73a2d':'#1d1d1d';
+    return `<g transform="rotate(${rot[i]} ${x+25} ${y+36})"><rect x="${x}" y="${y}" width="50" height="72" rx="5" fill="#f4efe2" stroke="#bfb7a2"/><text x="${x+7}" y="${y+16}" font-size="13" font-weight="700" fill="${col}" font-family="Gowun Batang, serif">${c.r}</text><text x="${x+25}" y="${y+50}" font-size="30" text-anchor="middle" fill="${col}">${c.s}</text></g>`;
+  }).join('');
+}
+
+/* ---------- 힌트 ---------- */
+let hintStage=null, hintLv=0;
+function nextHint(){
+  if(!S.seen.letter)return ['letter',['책상 위에서 가장 먼저 읽어야 할 것이 있습니다.','봉투에 담긴 종이를 열어 보세요.']];
+  if(!S.have.uv)return ['uv',['편지 종이의 결이 이상하게 반짝였습니다. 다른 빛으로 보면 어떨까요?','글 쓰는 도구들이 모여 있는 곳을 눈여겨보세요.']];
+  if(!S.uvRead)return ['uvRead',['손에 넣은 물건은 쓸 곳이 있어서 있는 법입니다. 어색했던 곳을 떠올려 보세요.','어색한 빈자리가 있던 물건에 다시 가 보세요.']];
+  if(!S.solved.cryptex)return ['cryptex',['새겨진 글귀는 글자 그대로의 뜻이 아닙니다.','"이빨"과 "노래"를 함께 가진 물건을 떠올려 보세요.']];
+  if(!S.seen.calendar)return ['calendar',['날짜와 관련된 물건이 책상 위에 있습니다.','달력의 어느 칸을 가리키는지, 요일을 짚어 가며 세어 보세요.']];
+  if(S.have.lens&&!S.lensCal)return ['lens',['네가 태어난 날에 대한 설명이 어딘가 부족합니다. 눈에 띄지 않던 글씨를 떠올려 보세요.','우측 하단 가방의 물건을 끌어다 써 볼 곳이 있습니다.']];
+  if(!S.seen.mirror)return ['mirror',['의자에 앉은 채로는 볼 수 없는 것이 어딘가에 비쳐 있습니다.','거울에 비친 모습은 실제와 같지 않습니다. 무엇이 달라질까요?']];
+  if(!S.solved.cube)return ['cube',['큐브는 단 세 번만 돌려 섞였습니다. 닥치는 대로 돌리기보다 한 수씩 생각해 보세요.','섞은 과정을 거꾸로 되짚는다고 생각해 보세요.']];
+  if(!S.seen.cards)return ['cards',['편지가 순서에 대해 한 말을 떠올려 보세요.','카드가 순서를 알려 준다고 했습니다. 카드를 살펴보세요.']];
+  if(S.have.key&&!S.keyUsed)return ['key',['금고 다이얼이 아직 가려져 있다면, 그건 덮개 때문입니다.','가방에 든 열쇠를 어디에 끌어다 댈지 생각해 보세요.']];
+  return ['final',['네 숫자를 모두 알았다면, 남은 것은 순서입니다.','노트에 적힌 읽는 방향과 "무늬만 본다"는 말을 따라 숫자를 늘어놓아 보세요.']];
+}
+function giveHint(inPanel){
+  S.hints++; save();
+  const r=nextHint();
+  if(r[0]===hintStage)hintLv=Math.min(hintLv+1,r[1].length-1); else{hintStage=r[0]; hintLv=0;}
+  const h=r[1][hintLv];
+  if(inPanel)$('#pHintText').textContent=h; else toast(h,7000);
+}
+
+/* ---------- 패널 ---------- */
+let cur=null, opener=null;
+function openItem(id){
+  const it=ITEMS.find(x=>x.id===id); if(!it)return;
+  cur=id; opener=document.activeElement;
+  $('#pTitle').textContent=it.name;
+  $('#pHintText').textContent='';
+  const b=$('#pBody'); b.innerHTML='';
+  ({safe:buildSafe,letter:buildLetter,pens:buildPens,cryptex:buildCryptex,cube:buildCube,calendar:buildCalendar,mirror:buildMirror,cards:buildCards})[id](b);
+  $('#overlay').hidden=false; $('.panel').scrollTop=0; $('#pClose').focus();
+  renderAll();
+}
+function closePanel(){
+  $('#overlay').hidden=true; cur=null;
+  if(opener&&opener.focus){try{opener.focus();}catch(e){}}
+  renderAll(); save();
+}
+
+/* 편지 */
+function buildLetter(b){
+  S.seen.letter=true; addNote('letter');
+  b.innerHTML=`<div class="sheet" id="sheet"><div></div><div class="uvt" id="uvt"></div></div><div class="row" id="uvRow"></div>`;
+  $('#sheet').firstElementChild.textContent=LETTER;
+  const row=$('#uvRow');
+  if(S.have.uv){
+    row.innerHTML=`<button class="btn" id="uvBtn" aria-pressed="false">UV 펜라이트 켜기</button>`;
+    let on=false;
+    $('#uvBtn').addEventListener('click',()=>{
+      on=!on;
+      $('#sheet').classList.toggle('uv-on',on);
+      $('#uvt').textContent=on?UVTEXT:'';
+      $('#uvBtn').textContent=on?'UV 펜라이트 끄기':'UV 펜라이트 켜기';
+      $('#uvBtn').setAttribute('aria-pressed',String(on));
+      beep(1200,.06,.04,'sine');
+      if(on&&!S.uvRead){S.uvRead=true; addNote('uv'); chime(); renderDone(); save();}
+    });
+  }else{
+    row.innerHTML=`<p class="meta">보이는 글씨 사이에 어색한 빈자리가 있다. 종이 결이 이상하게 반짝인다. 특별한 빛이 있다면 더 보일지도 모른다.</p>`;
+  }
+}
+
+/* 연필꽂이 */
+function buildPens(b){
+  b.innerHTML=`<div class="pens"><svg viewBox="0 0 280 200" aria-hidden="true">
+    <g stroke-linecap="round"><line x1="110" y1="120" x2="86" y2="28" stroke="#c8473b" stroke-width="9"/><line x1="130" y1="120" x2="136" y2="14" stroke="#3b6fc8" stroke-width="9"/><line x1="150" y1="120" x2="178" y2="30" stroke="#2c2c2c" stroke-width="9"/>
+    <g id="penUV"><line x1="140" y1="120" x2="204" y2="46" stroke="#7f63d6" stroke-width="8"/><circle cx="204" cy="46" r="5" fill="#e1d6ff"/></g></g>
+    <path d="M80 110h120l-10 80q-2 8-10 8H100q-8 0-10-8z" fill="#2f3d44" stroke="#0e1417"/><path d="M86 140h108M89 164h102" stroke="#c9a55a" stroke-opacity=".4"/></svg></div>
+    <p>빨간 펜, 파란 펜, 검은 펜. 그 사이에 손가락 길이의 작은 라이트가 꽂혀 있다. 끝에 'UV'라고 적혀 있다.</p>
+    <div class="row" id="penRow"></div>`;
+  const row=$('#penRow');
+  const draw=()=>{
+    $('#penUV').style.display=S.have.uv?'none':'';
+    row.innerHTML=S.have.uv?'<p class="meta">UV 펜라이트는 이미 챙겼다.</p>':'<button class="btn primary" id="takeUV">UV 펜라이트를 챙긴다</button>';
+    const t=$('#takeUV');
+    if(t)t.addEventListener('click',()=>{S.have.uv=true; save(); chime(); toast('UV 펜라이트를 얻었다. 글씨가 안 보이는 종이에 비춰 보자.'); renderAll(); draw();});
+  };
+  draw();
+}
+
+/* 크립텍스 */
+function buildCryptex(b){
+  b.innerHTML=`<p class="engr">여든여덟 개의 이빨을 가졌지만 아무것도 물지 못한다.<br>손끝이 닿으면 노래를 부른다.</p>
+    <div class="cx" id="cx"></div>
+    <p class="meta" style="text-align:center">영문 대문자 5자. 링마다 위아래 버튼으로 글자를 돌린다.</p>
+    <div id="cxOut"></div>`;
+  const cx=$('#cx');
+  cx.innerHTML=cxL.map((l,i)=>`<div class="ring"><button class="rb" data-i="${i}" data-d="-1" aria-label="${i+1}번째 링 글자 앞으로">▲</button><div class="rl" id="rl${i}">${l}</div><button class="rb" data-i="${i}" data-d="1" aria-label="${i+1}번째 링 글자 뒤로">▼</button></div>`).join('');
+  const out=$('#cxOut');
+  const slip=()=>{
+    cx.classList.add('open');
+    out.innerHTML=`<div class="slip">크립텍스가 열리며 말린 쪽지가 나온다.\n\n검은 이빨은 서른여섯 개.\n♠ = 흰 이빨의 수 − 검은 이빨의 수<br><br>쪽지 곁에 작은 돋보기가 끼워져 있다.</div>`;
+  };
+  if(S.solved.cryptex)slip();
+  cx.addEventListener('click',e=>{
+    const btn=e.target.closest('.rb'); if(!btn||S.solved.cryptex)return;
+    const i=+btn.dataset.i, d=+btn.dataset.d;
+    cxL[i]=String.fromCharCode(65+mod(cxL[i].charCodeAt(0)-65+d,26));
+    $('#rl'+i).textContent=cxL[i]; beep(1500,.03,.035);
+    if(cxL.join('')==='PIANO'){S.solved.cryptex=true; addNote('spade'); chime(); slip(); renderAll(); save(); giveItem('lens');}
+  });
+}
+
+/* 큐브 */
+function netHTML(st){
+  const pos={U:[1,0],L:[0,1],F:[1,1],R:[2,1],B:[3,1],D:[1,2]};
+  const cells={}; Object.keys(pos).forEach(k=>{cells[k]=[[null,null],[null,null]];});
+  st.forEach(s=>{const c=netCell(s); cells[c.f][c.r][c.c]=s.c;});
+  return '<div class="net" role="img" aria-label="큐브 전개도">'+Object.keys(pos).map(f=>{
+    const g=pos[f];
+    return `<div class="face" style="grid-column:${g[0]+1};grid-row:${g[1]+1}">${cells[f].reduce((a,r)=>a.concat(r),[]).map(c=>`<i style="background:${COLORS[c]}"></i>`).join('')}<b>${'URF'.includes(f)?f:''}</b></div>`;
+  }).join('')+'</div>';
+}
+/* 3D 큐브: 끌어서 돌린다 */
+const C3={U:62,D:9,CX:150,CY:150}, HP=Math.PI/2, DEF_VIEW={yaw:-Math.PI/4,pitch:0.52};
+let view={yaw:DEF_VIEW.yaw,pitch:DEF_VIEW.pitch}, turn=null, busy=false;
+const E3=[[1,0,0],[0,1,0],[0,0,1]];
+const vadd=(a,b,k)=>[a[0]+b[0]*k,a[1]+b[1]*k,a[2]+b[2]*k];
+function viewFn(){
+  const cy=Math.cos(view.yaw),sy=Math.sin(view.yaw),cp=Math.cos(view.pitch),sp=Math.sin(view.pitch);
+  return v=>{const x=v[0]*cy+v[2]*sy,z1=-v[0]*sy+v[2]*cy;return [x,v[1]*cp-z1*sp,v[1]*sp+z1*cp];};
+}
+function rotFn(ai,a){
+  const c=Math.cos(a),s=Math.sin(a),i=(ai+1)%3,j=(ai+2)%3;
+  return v=>{const r=v.slice();r[i]=v[i]*c-v[j]*s;r[j]=v[i]*s+v[j]*c;return r;};
+}
+function shade(hex,k){
+  const n=parseInt(hex.slice(1),16), f=c=>Math.max(0,Math.min(255,Math.round(c*k)));
+  return `rgb(${f(n>>16&255)},${f(n>>8&255)},${f(n&255)})`;
+}
+function turnLayer(st,ai,side,rh){
+  const f=ROT[AXN[ai]][rh>0?'ccw':'cw'];
+  return st.map(s=>s.p[ai]===side?{p:f(s.p),n:f(s.n),c:s.c}:s);
+}
+function cube3dMarkup(st){
+  const V=viewFn(), R=turn?rotFn(turn.ai,turn.ang):null, idx={}, faces=[];
+  st.forEach((s,i)=>{idx[s.p.join()+'|'+s.n.join()]=i;});
+  for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1]){
+    const p=[x,y,z], spin=!!R&&p[turn.ai]===turn.side, T=q=>V(spin?R(q):q);
+    for(let a=0;a<3;a++)for(const sg of [-1,1]){
+      const outer=p[a]===sg;
+      if(!outer&&!(turn&&turn.ai===a))continue;
+      const n=[0,0,0]; n[a]=sg;
+      const u=E3[(a+1)%3], w=E3[(a+2)%3], c=vadd([x/2,y/2,z/2],n,.5);
+      const nv=V(spin?R(n):n), cv=T(c);
+      if(-nv[0]*cv[0]-nv[1]*cv[1]+nv[2]*(C3.D-cv[2])<=0)continue;
+      const quad=(h,o)=>[[-1,-1],[1,-1],[1,1],[-1,1]].map(m=>T(vadd(vadd(vadd(c,n,o),u,m[0]*h),w,m[1]*h)));
+      faces.push({z:cv[2],nv,body:quad(.5,0),stk:outer?quad(.42,.012):null,si:outer?idx[p.join()+'|'+n.join()]:-1,inner:!outer});
+    }
+  }
+  faces.sort((a,b)=>a.z-b.z);
+  const pr=q=>{const f=C3.D/(C3.D-q[2]);return (C3.CX+q[0]*C3.U*f).toFixed(1)+','+(C3.CY-q[1]*C3.U*f).toFixed(1);};
+  const pts=q=>q.map(pr).join(' ');
+  return faces.map(f=>{
+    let o=`<polygon points="${pts(f.body)}" fill="${f.inner?'#1d292f':'#0d1215'}" stroke="#0d1215" stroke-width="1.4" stroke-linejoin="round"/>`;
+    if(f.stk){
+      const k=.7+.36*Math.max(0,f.nv[0]*-.25+f.nv[1]*.55+f.nv[2]*.8);
+      o+=`<polygon class="stk" data-i="${f.si}" points="${pts(f.stk)}" fill="${shade(COLORS[st[f.si].c],k)}" stroke="#0d1215" stroke-width="1" stroke-linejoin="round"/>`;
+    }
+    return o;
+  }).join('');
+}
+const MV={"U":[1,1,-1],"U'":[1,1,1],"R":[0,1,-1],"R'":[0,1,1],"F":[2,1,-1],"F'":[2,1,1]};
+function buildCube(b){
+  turn=null; busy=false;
+  b.innerHTML=`<div class="cubeview" id="cubeView"><svg id="cube3d" class="c3d" viewBox="0 0 300 300" tabindex="0" role="img" aria-label="2×2 큐브. 끌어서 돌린다. 방향키로 시점을 바꾼다."><ellipse cx="150" cy="276" rx="80" ry="10" fill="#000" opacity=".3"/><g id="c3g"></g></svg><div id="netBox"></div></div>
+    <div class="moves" id="moves">${["U","U'","R","R'","F","F'"].map(m=>`<button class="mv" data-m="${m}" aria-label="${m[0]} 면 ${m.length>1?'반시계':'시계'} 방향">${m.replace("'",'′')}</button>`).join('')}</div>
+    <div class="row"><button class="btn" id="cbUndo">한 수 되돌리기</button><button class="btn" id="cbReset">처음 섞인 상태로</button><button class="btn" id="cbView">시점 되돌리기</button><span class="meta" id="cbCount"></span></div>
+    <p class="meta">빈 곳을 끌면 큐브 전체가 돌아간다. 색 조각을 끌면 그 줄이 90도 돌아간다. 버튼으로도 돌릴 수 있다. U는 윗면, R은 오른쪽 면, F는 앞면을 시계 방향으로 돌리고 ′ 표시는 반시계 방향이다. 이 큐브는 정확히 세 번 돌려서 섞였다.</p>
+    <div id="cubeOut"></div>`;
+  const svg=$('#cube3d'), g=$('#c3g');
+  const render=()=>{g.innerHTML=cube3dMarkup(cube);};
+  const draw=()=>{
+    render(); $('#netBox').innerHTML=netHTML(cube);
+    $('#cbCount').textContent=hist.length?`${hist.length}수`:'';
+    $('#cbUndo').disabled=!hist.length;
+    if(S.solved.cube){
+      $('#cubeOut').innerHTML=`<div class="slip">큐브가 맞춰지자 한가운데서 쪽지가 떨어진다.\n\n조각은 모두 여덟 개.\n♥ = 조각의 수 × 3 − 1<br><br>쪽지와 함께 작은 놋쇠 열쇠가 굴러 나왔다.</div>`;
+    }
+    renderDeskCube();
+  };
+  const settle=(to,done)=>{
+    const my=turn, a0=my.ang, t0=performance.now(), dur=Math.abs(to-a0)/HP*190;
+    busy=true;
+    if(dur<8){my.ang=to; done(); return;}
+    const step=now=>{
+      if(turn!==my)return;
+      const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3);
+      my.ang=a0+(to-a0)*e; render();
+      if(k<1)requestAnimationFrame(step); else done();
+    };
+    requestAnimationFrame(step);
+  };
+  const finish=kind=>{
+    const t=turn, rh=Math.round(t.ang/HP); turn=null; busy=false;
+    if(rh){
+      cube=turnLayer(cube,t.ai,t.side,rh);
+      if(kind==='undo')hist.pop(); else hist.push({ai:t.ai,side:t.side,rh});
+      beep(900,.04,.04,'triangle');
+      if(!S.solved.cube&&isSolved(cube)){S.solved.cube=true; addNote('heart'); chime(); renderDone(); save(); giveItem('key');}
+    }
+    draw();
+  };
+  const begin=(d,dx,dy)=>{
+    const s=cube[d.si], an=s.n.findIndex(v=>v!==0), V=viewFn();
+    let best=null, bs=-1e9;
+    for(let i=0;i<3;i++){ if(i===an)continue; for(const sg of [-1,1]){
+      const t=[0,0,0]; t[i]=sg; const tv=V(t), sx=tv[0], sy=-tv[1], sc=dx*sx+dy*sy;
+      if(sc>bs){bs=sc; best={t,sx,sy};}
+    }}
+    const n=s.n, t=best.t, a=[n[1]*t[2]-n[2]*t[1],n[2]*t[0]-n[0]*t[2],n[0]*t[1]-n[1]*t[0]];
+    const ai=a.findIndex(v=>v!==0), len=Math.hypot(best.sx,best.sy)||1;
+    d.mode='turn'; d.sa=a[ai]; d.dir=[best.sx/len,best.sy/len];
+    d.L=Math.max(.35,len)*1.57*C3.U*svg.getBoundingClientRect().width/300;
+    turn={ai,side:s.p[ai],ang:0};
+  };
+  let drag=null;
+  svg.addEventListener('pointerdown',e=>{
+    if(busy)return;
+    const t=e.target.closest('.stk');
+    drag={x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,si:t?+t.dataset.i:-1,mode:null};
+    try{svg.setPointerCapture(e.pointerId);}catch(x){}
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    const dx=e.clientX-drag.x0, dy=e.clientY-drag.y0;
+    if(!drag.mode){
+      if(Math.hypot(dx,dy)<7)return;
+      if(drag.si<0)drag.mode='orbit'; else begin(drag,dx,dy);
+    }
+    if(drag.mode==='orbit'){
+      view.yaw+=(e.clientX-drag.lx)*.012;
+      view.pitch=Math.max(-1.45,Math.min(1.45,view.pitch+(e.clientY-drag.ly)*.012));
+      drag.lx=e.clientX; drag.ly=e.clientY; render();
+    }else if(turn){
+      const q=Math.max(-1.1,Math.min(1.1,(dx*drag.dir[0]+dy*drag.dir[1])/drag.L));
+      turn.ang=drag.sa*q*HP; render();
+    }
+  });
+  const up=e=>{
+    if(!drag)return; const d=drag; drag=null;
+    try{svg.releasePointerCapture(e.pointerId);}catch(x){}
+    if(d.mode==='turn'&&turn){
+      const qa=turn.ang/HP;
+      settle(Math.abs(qa)>.34?Math.sign(qa)*HP:0,()=>finish('move'));
+    }
+  };
+  svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
+  svg.addEventListener('keydown',e=>{
+    const k={ArrowLeft:[-.2,0],ArrowRight:[.2,0],ArrowUp:[0,-.2],ArrowDown:[0,.2]}[e.key]; if(!k)return;
+    e.preventDefault(); view.yaw+=k[0]; view.pitch=Math.max(-1.45,Math.min(1.45,view.pitch+k[1])); render();
+  });
+  $('#moves').addEventListener('click',e=>{
+    const m=e.target.closest('.mv'); if(!m||busy)return;
+    const v=MV[m.dataset.m]; turn={ai:v[0],side:v[1],ang:0}; settle(v[2]*HP,()=>finish('move'));
+  });
+  $('#cbUndo').addEventListener('click',()=>{
+    if(busy||!hist.length)return; const h=hist[hist.length-1];
+    turn={ai:h.ai,side:h.side,ang:0}; settle(-h.rh*HP,()=>finish('undo'));
+  });
+  $('#cbReset').addEventListener('click',()=>{if(busy)return; cube=S.solved.cube?solvedCube():scrambled(); hist=[]; draw();});
+  $('#cbView').addEventListener('click',()=>{view={yaw:DEF_VIEW.yaw,pitch:DEF_VIEW.pitch}; render();});
+  draw();
+}
+
+/* 달력 */
+function buildCalendar(b){
+  S.seen.calendar=true; addNote('diamond');
+  const wd=['일','월','화','수','목','금','토'];
+  let cells=wd.map((w,i)=>`<span class="wd ${i===0?'sun':''}">${w}</span>`).join('');
+  for(let i=0;i<4;i++)cells+='<span></span>';
+  for(let d=1;d<=31;d++){
+    const dow=(4+d-1)%7, note=d===3?'개천절':d===9?'한글날':'';
+    cells+=`<span class="${dow===0?'sun':''}"><b>${d}</b>${note?`<small>${note}</small>`:''}</span>`;
+  }
+  b.innerHTML=`<div class="cal" data-drop="calendar"><h3><span>2026</span><span>10월</span></h3><div class="cal-grid">${cells}</div><div class="scrawl">♦ 네가 태어난 날.\n${S.lensCal?'<br>귀퉁이의 작은 연필 글씨: 10월의 셋째 목요일.':'<br>귀퉁이에 연필로 쓴 얼룩 같은 글씨가 있다. 너무 작아서 읽을 수 없다.'}</div></div>`;
+}
+
+/* 손거울 */
+function buildMirror(b){
+  S.seen.mirror=true; addNote('club');
+  const hA=3*30+35*0.5, mA=35*6;
+  const pt=(a,r)=>[(Math.sin(a*Math.PI/180)*r).toFixed(1),(-Math.cos(a*Math.PI/180)*r).toFixed(1)];
+  let ticks='', nums='';
+  for(let i=0;i<60;i++){const long=i%5===0,p1=pt(i*6,long?76:80),p2=pt(i*6,86); ticks+=`<line x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}" stroke="#2a3a40" stroke-width="${long?2.4:1}"/>`;}
+  for(let n=1;n<=12;n++){const p=pt(n*30,63); nums+=`<text x="${p[0]}" y="${p[1]}" text-anchor="middle" dominant-baseline="central" font-size="17" font-weight="700" fill="#1d2a30" font-family="Gowun Batang, serif">${n}</text>`;}
+  const h=pt(hA,44), m=pt(mA,70);
+  b.innerHTML=`<p>손거울에는 책상 맞은편 벽시계가 비쳐 있다. 의자를 돌려 뒤를 볼 수는 없다.</p>
+    <div class="mirror"><svg viewBox="-100 -100 200 200" role="img" aria-label="거울에 비친 시계">
+      <circle r="97" fill="#b8923f"/><circle r="92" fill="#8a6a2a"/><circle r="88" fill="#cbd9d8"/>${ticks}${nums}
+      <line x1="0" y1="0" x2="${h[0]}" y2="${h[1]}" stroke="#1d2a30" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="0" x2="${m[0]}" y2="${m[1]}" stroke="#1d2a30" stroke-width="3.6" stroke-linecap="round"/>
+      <circle r="5" fill="#1d2a30"/>
+      <path d="M-60 -52Q-36 -78 -2 -80" stroke="#fff" stroke-opacity=".45" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </svg></div>
+    <p class="engrave">거울 뒷면에 새겨진 글<br>♣ 진짜 시각의 "분"</p>`;
+}
+
+/* 카드 */
+function buildCards(b){
+  S.seen.cards=true; addNote('cards');
+  b.innerHTML=`<div class="cards">${CARDS.map(c=>`<div class="card ${c.red?'red':''}"><span class="r">${c.r}</span><span class="s">${c.s}</span><span class="r2">${c.r}</span></div>`).join('')}</div>
+    <p>네 장이 한 줄로 놓여 있다. 누군가 일부러 이 순서로 늘어놓은 것 같다.</p>`;
+}
+
+/* 금고 */
+const val=()=>mod(Math.round(theta/9),40);
+function buildSafe(b){
+  if(S.won){openedView(b); return;}
+  if(!S.keyUsed){b.innerHTML=`<div class='slip' data-drop='safe'>다이얼 위로 두꺼운 덮개가 내려와 있다. 한쪽에 작은 열쇠 구멍이 보인다.<br><br>맞는 열쇠가 있어야 덮개를 열 수 있을 것 같다.</div>`; return;}
+  b.innerHTML=`<svg id="safeSvg" class="safe" viewBox="0 0 360 360" tabindex="0" role="slider" aria-label="금고 다이얼" aria-valuemin="0" aria-valuemax="39" aria-valuenow="${val()}">
+      <defs><linearGradient id="sSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#76848b"/><stop offset=".5" stop-color="#4a575d"/><stop offset="1" stop-color="#2d373c"/></linearGradient>
+      <radialGradient id="sKnob" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#f0d68e"/><stop offset=".6" stop-color="#b8923f"/><stop offset="1" stop-color="#6e531f"/></radialGradient></defs>
+      <rect x="8" y="8" width="344" height="344" rx="16" fill="url(#sSteel)" stroke="#0b0f11" stroke-width="3"/>
+      <rect x="24" y="24" width="312" height="312" rx="10" fill="none" stroke="#fff" stroke-opacity=".13"/>
+      <g fill="#5d686d" stroke="#1b2327"><circle cx="38" cy="38" r="6"/><circle cx="322" cy="38" r="6"/><circle cx="38" cy="322" r="6"/><circle cx="322" cy="322" r="6"/></g>
+      <circle cx="180" cy="180" r="130" fill="#12181b" stroke="#c9a55a" stroke-width="3"/>
+      <g id="dialG" transform="rotate(${theta} 180 180)">${dialMarkup(180,180,118,true)}
+        <circle cx="180" cy="180" r="44" fill="url(#sKnob)" stroke="#5e4617" stroke-width="2"/><path d="M180 180V142" stroke="#3b2c0d" stroke-width="4" stroke-linecap="round"/></g>
+      <path d="M171 40h18l-9 20z" fill="#f2b45e" stroke="#1a1408"/>
+    </svg>
+    <div class="readout"><span class="meta">가리키는 숫자</span><output id="rv" for="safeSvg">${val()}</output></div>
+    <div class="leds" id="leds"></div>
+    <div class="row center"><button class="btn" data-t="-5">−5</button><button class="btn" data-t="-1">−1</button><button class="btn" data-t="1">+1</button><button class="btn" data-t="5">+5</button></div>
+    <div class="row center"><button class="btn primary" id="sLock">이 번호로 맞춘다</button><button class="btn" id="sClear">입력 지우기</button></div>
+    <p class="meta" id="sMsg">다이얼을 끌어서 돌린다. 키보드는 ← → 로 한 칸, Shift 와 함께 다섯 칸, Enter 로 확정.</p>`;
+  const svg=$('#safeSvg'); let dragging=false,lastA=0,pv=val();
+  const setTheta=(t,snap)=>{
+    theta=snap?Math.round(t/9)*9:t;
+    $('#dialG').setAttribute('transform',`rotate(${theta} 180 180)`);
+    const v=val(); $('#rv').textContent=v; svg.setAttribute('aria-valuenow',String(v));
+    if(v!==pv){pv=v; beep(1900,.02,.03);}
+  };
+  const ang=e=>{const r=svg.getBoundingClientRect(); return Math.atan2(e.clientX-(r.left+r.width/2),-(e.clientY-(r.top+r.height/2)))*180/Math.PI;};
+  svg.addEventListener('pointerdown',e=>{dragging=true; lastA=ang(e); try{svg.setPointerCapture(e.pointerId);}catch(x){}});
+  svg.addEventListener('pointermove',e=>{
+    if(!dragging)return; const a=ang(e); let d=a-lastA; if(d>180)d-=360; if(d<-180)d+=360; lastA=a; setTheta(theta+d,false);
+  });
+  const end=()=>{if(!dragging)return; dragging=false; setTheta(theta,true);};
+  svg.addEventListener('pointerup',end); svg.addEventListener('pointercancel',end);
+  svg.addEventListener('keydown',e=>{
+    const st=e.shiftKey?5:1;
+    if(e.key==='ArrowRight'||e.key==='ArrowUp'){e.preventDefault(); setTheta(theta+9*st,true);}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowDown'){e.preventDefault(); setTheta(theta-9*st,true);}
+    else if(e.key==='Enter'){e.preventDefault(); lock();}
+  });
+  $$('[data-t]',b).forEach(btn=>btn.addEventListener('click',()=>setTheta(theta+9*(+btn.dataset.t),true)));
+  const leds=()=>{$('#leds').innerHTML=[0,1,2,3].map(i=>`<div class="led ${entered[i]!==undefined?'on':''}">${entered[i]!==undefined?entered[i]:'—'}</div>`).join('');};
+  const msg=t=>{$('#sMsg').textContent=t;};
+  function lock(){
+    if(lockedInput)return;
+    entered.push(val()); beep(800,.08,.06); leds();
+    if(entered.length<4){msg(`${entered.length}번째 번호를 맞췄다.`); return;}
+    if(entered.every((n,i)=>n===SAFE_CODE[i])){
+      S.won=true; save(); chime(); renderDone(); openedView(b); return;
+    }
+    lockedInput=true; msg('찰칵. 열리지 않는다. 처음부터 다시 맞춰야 한다.'); beep(200,.25,.06,'sawtooth');
+    $('#leds').classList.add('shake');
+    setTimeout(()=>{entered=[]; lockedInput=false; if($('#leds')){$('#leds').classList.remove('shake'); leds();}},1300);
+  }
+  $('#sLock').addEventListener('click',lock);
+  $('#sClear').addEventListener('click',()=>{if(lockedInput)return; entered=[]; leds(); msg('입력을 지웠다.');});
+  leds();
+}
+function openedView(b){
+  $('#pHintBtn').hidden=true;
+  b.innerHTML=`<div class="opened"><div class="vault"><div class="in"><div class="photo"></div></div><div class="dr"></div></div>
+    <p>철컥. 두꺼운 문이 천천히 열린다.</p><button class="btn primary" id="toEnd">안을 살펴본다</button></div>`;
+  $('#toEnd').addEventListener('click',()=>{closePanel(); showEnd();});
+}
+function showEnd(){
+  $('#endNote').textContent=ENDNOTE;
+  $('#stTime').textContent=fmt(S.elapsed); $('#stHint').textContent=String(S.hints);
+  showScreen('end'); window.scrollTo(0,0);
+}
+
+/* ---------- 시작 / 초기화 ---------- */
+function newGame(){
+  hintStage=null; S=fresh(); S.started=true; cube=scrambled(); cxL=['K','T','R','B','E']; hist=[]; theta=0; entered=[]; lockedInput=false;
+  save(); renderAll(); showScreen('game'); $('#pHintBtn').hidden=false;
+  toast('책상 위 물건을 눌러 살펴보자. 금고는 가운데 있다.',5000);
+}
+let resetArm=null;
+
+function init(){
+  $('#decoDial').innerHTML=dialMarkup(100,100,92,true);
+  $('#miniDial').innerHTML=dialMarkup(500,268,50,false);
+  buildDeskCards(); initTray();
+  $('#itemNav').innerHTML=ITEMS.map(it=>`<button class="chip" data-id="${it.id}"><span class="dot"></span>${it.name}</button>`).join('');
+  $$('.item').forEach(g=>{
+    g.addEventListener('click',()=>openItem(g.dataset.id));
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); openItem(g.dataset.id);}});
+  });
+  $$('.chip').forEach(c=>c.addEventListener('click',()=>openItem(c.dataset.id)));
+  $('#pClose').addEventListener('click',closePanel);
+  $('#overlay').addEventListener('click',e=>{if(e.target===$('#overlay'))closePanel();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#overlay').hidden)closePanel();});
+  $('#pHintBtn').addEventListener('click',()=>giveHint(true));
+  $('#btnHint').addEventListener('click',()=>giveHint(false));
+  $('#btnSound').addEventListener('click',()=>{
+    soundOn=!soundOn; $('#btnSound').textContent=soundOn?'소리 켜짐':'소리 꺼짐'; $('#btnSound').setAttribute('aria-pressed',String(soundOn));
+  });
+  $('#btnReset').addEventListener('click',()=>{
+    const bt=$('#btnReset');
+    if(resetArm){clearTimeout(resetArm); resetArm=null; bt.textContent='처음부터'; newGame(); return;}
+    bt.textContent='한 번 더 누르면 처음부터'; resetArm=setTimeout(()=>{resetArm=null; bt.textContent='처음부터';},3000);
+  });
+  $('#btnStart').addEventListener('click',()=>{beep(700,.05,.04,'sine'); newGame();});
+  $('#btnContinue').addEventListener('click',()=>{renderAll(); showScreen('game');});
+  $('#btnAgain').addEventListener('click',()=>newGame());
+  if(S.started&&!S.won){$('#btnContinue').hidden=false; $('#btnStart').textContent='새로 시작';}
+  renderAll(); showScreen('title');
+
+  let last=Date.now();
+  setInterval(()=>{
+    const t=Date.now();
+    if(S.started&&!S.won&&!$('#sGame').hidden&&!document.hidden){S.elapsed+=t-last; renderTimer();}
+    last=t;
+  },1000);
+  setInterval(()=>{if(S.started&&!S.won)save();},10000);
+}
+init();
+})();
+</script>
+
+</body></html>
