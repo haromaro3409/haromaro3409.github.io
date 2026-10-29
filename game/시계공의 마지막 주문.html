@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시계공의 마지막 주문</title>
+<style>
+:root{--bg:#efe6d4;--panel:#fbf5e6;--ink:#2b2014;--sub:#6e5a40;--line:#b99a62;--accent:#8a5a14;--brass:#c58b1e;--tile:#e4d4b2;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17110a;--panel:#241a0f;--ink:#f1e4c8;--sub:#b9a380;--line:#6b5230;--accent:#e0a84a;--brass:#e0a84a;--tile:#30230f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17110a;--panel:#241a0f;--ink:#f1e4c8;--sub:#b9a380;--line:#6b5230;--accent:#e0a84a;--brass:#e0a84a;--tile:#30230f;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nanum Myeongjo","Noto Serif KR",Georgia,serif;line-height:1.65}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+main{max-width:760px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:2px solid var(--line);padding-bottom:10px}
+h1{font-size:1.25rem;margin:0}
+#timer{font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:700;color:var(--accent)}
+#timer.low{color:#c0392b}
+.story{color:var(--sub);font-size:.92rem;margin:10px 0}
+.room{position:relative;container-type:inline-size;aspect-ratio:4/3;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:repeating-linear-gradient(90deg,#4b3727 0 4cqw,#45321f 4cqw 8cqw)}
+.wain{position:absolute;left:0;right:0;top:58%;height:11%;background:#3a2918;border-top:3px solid #2a1c0f}
+.fl{position:absolute;left:0;right:0;top:69%;bottom:0;background:repeating-linear-gradient(90deg,#2d1e11 0 9%,#241709 9% 10%)}
+.rug{position:absolute;left:25%;top:78%;width:50%;height:16%;border-radius:50%;background:#6b2b2b;border:3px solid #c58b1e}
+.desk{position:absolute;left:22%;top:52%;width:44%;height:18%;background:#7a4e22;border-top:6px solid #9a6a33;border-radius:3px}
+.hs{position:absolute;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;font-family:inherit}
+.hs:hover,.hs:focus-visible{outline:2px dashed #e0a84a;background:rgba(224,168,74,.16)}
+.hs i{font-style:normal;line-height:1}
+.hs.done::after{content:"✓";position:absolute;right:-2px;top:-2px;width:1.3em;height:1.3em;font-size:3cqw;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);color:#8ee08a;border-radius:50%;font-family:sans-serif}
+.gc{width:100%;height:100%;background:linear-gradient(90deg,#5a3515,#7a4e22,#5a3515);border:3px solid #3a2210;border-radius:30% 30% 4px 4px/12% 12% 4px 4px;display:flex;flex-direction:column;align-items:center;padding-top:10%}
+.gc em{display:block;width:38%;aspect-ratio:1;border-radius:50%;background:#c58b1e;border:2px solid #7a4e10;margin-top:auto;margin-bottom:12%}
+.door{display:block;position:relative;width:100%;height:100%;background:linear-gradient(#6a4220,#58351a);border:4px solid #2e1c0e;border-radius:40% 40% 0 0/12% 12% 0 0}
+.door::after{content:"";position:absolute;right:12%;top:52%;width:9%;aspect-ratio:1;border-radius:50%;background:#c58b1e}
+.safe{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#59595f;border:4px solid #2c2c30;border-radius:6px}
+.wg{display:flex;flex-direction:column;justify-content:space-between;width:100%;height:100%;gap:6%}
+.wg .r{display:flex;justify-content:space-around;align-items:center;flex:1;min-height:0}
+.wg s{display:block;height:100%;aspect-ratio:1;border:.9cqw solid;border-radius:50%;background:#f6ecd0}
+.wg s.f{aspect-ratio:4/5;border-radius:2px;border-width:.8cqw;background:#8a7a62}
+.dr{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#8e5f2c;border:2px solid #4a2d12;border-radius:3px}
+.dr u{display:block;width:3cqw;aspect-ratio:1;border-radius:50%;background:#c58b1e}
+.tile{background:var(--tile);border:1px solid var(--line);border-radius:10px;padding:14px 6px;text-align:center;cursor:pointer;color:var(--ink);font:inherit;min-height:96px}
+.tile:hover,.tile:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+.tile b{display:block;font-size:2rem;line-height:1.2}
+.tile span{font-size:.85rem}
+.tile.done{opacity:.55}
+.bar{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+#inv{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-height:44px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink);font:inherit;font-size:.9rem}
+button.btn{background:var(--accent);color:var(--bg);border:0;border-radius:8px;padding:9px 16px;font:inherit;cursor:pointer}
+button.btn:focus-visible,.item:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+#toast{min-height:28px;margin-top:10px;color:var(--accent);font-weight:700}
+#m,#end{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:12px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:18px}
+.card h2{margin:0 0 8px;font-size:1.1rem}
+.paper{background:#f6ecd0;color:#2b2014;border:1px solid #b99a62;padding:12px 14px;border-radius:6px;font-size:1.05rem}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+input{font:inherit;font-size:1.3rem;letter-spacing:.3em;width:7.5em;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);text-align:center}
+.clocks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-size:.85rem}
+.photo{border:5px solid;padding:10px 2px;background:#f6ecd0;color:#2b2014;border-radius:3px}
+.big{font-size:2.2rem;text-align:center;font-variant-numeric:tabular-nums}
+.mini{color:var(--sub);font-size:.88rem}
+.kb{display:inline-flex;gap:3px}
+.kb b{display:block;width:2.2em;height:3.4em;background:#f6ecd0;border:1px solid #2b2014;border-radius:0 0 4px 4px}
+.kb b.on{background:#e0a84a}
+@media (max-width:420px){.room{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:no-preference){.card{animation:pop .18s ease-out}@keyframes pop{from{transform:scale(.96);opacity:0}}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>시계공의 마지막 주문</h1><div id="timer">60:00</div></header>
+<p class="story">천재 시계공 한서진이 작업실에서 사라졌습니다. 문은 잠겼고, 괘종시계는 올바른 시각에서만 종을 울린다고 합니다. 물건을 눌러 살펴보세요. (난이도 2~3 / 5)</p>
+<div class="room" id="room"></div>
+<div id="toast" role="status"></div>
+<div class="bar"><div id="inv" aria-label="소지품"></div><button class="btn" onclick="hint()">힌트 (<span id="hc">0</span>)</button></div>
+</main>
+<div id="m"></div>
+<div id="end"></div>
+<script>
+var S={inv:[],drawer:0,box:0,safe:0,clock:0,h:12,m:30,hints:0,hs:[0,0,0,0],t:3600,over:0};
+var NAMES={mirror:"🪞 작은 거울",dkey:"🗝️ 서랍 열쇠",uv:"🔦 UV 손전등",watch:"⌚ 회중시계",wkey:"🔑 태엽 열쇠",door:"🚪 문 열쇠",fk:"🗝️ 녹슨 열쇠"};
+var TILES=[["letter","📜","책상 위 편지"],["clock","🕰️","괘종시계"],["drawer","🗄️","책상 서랍"],["boxd","🧰","다이얼 상자"],["wall","⏰","벽시계와 사진"],["safe","🔒","벽 금고"],["door","🚪","문"]];
+function $(i){return document.getElementById(i)}
+function has(k){return S.inv.indexOf(k)>-1}
+function give(k){if(!has(k))S.inv.push(k);draw()}
+function take(k){S.inv=S.inv.filter(function(x){return x!==k});draw()}
+function toast(t){$("toast").textContent=t}
+function draw(){
+  var P=function(id,l,t,w,h,inner,lab,dn){return '<button class="hs'+(dn?' done':'')+'" style="left:'+l+'%;top:'+t+'%;width:'+w+'%;height:'+h+'%" onclick="openObj(\''+id+'\')" aria-label="'+lab+'" title="'+lab+'">'+inner+'</button>'};
+  var E=function(c,s){return '<i style="font-size:'+s+'cqw">'+c+'</i>'};
+  var cl=["#2e6fd0","#e0b400","#d03a2e","#2f9a4c"];
+  var wg='<span class="wg"><span class="r">'+cl.map(function(c){return '<s style="border-color:'+c+'"></s>'}).join("")+'</span><span class="r">'+cl.map(function(c){return '<s class="f" style="border-color:'+c+'"></s>'}).join("")+'</span></span>';
+  $("room").innerHTML='<div class="wain"></div><div class="fl"></div><div class="rug"></div><div class="desk"></div>'
+   +P("clock",4,12,13,58,'<span class="gc">'+E("🕰️",6)+'<em></em></span>',"괘종시계",S.clock)
+   +P("wall",22,6,42,28,wg,"벽시계와 가족사진")
+   +P("safe",68,14,10,15,'<span class="safe">'+E("🔒",4.5)+'</span>',"벽 금고",S.safe)
+   +P("door",81,16,15,54,'<span class="door"></span>',"문")
+   +(has("mirror")?'':P("mirror",37,41,8,11,E("🪞",6),"작은 거울"))
+   +P("plant",69,57,9,12,E("🪴",6),"화분")
+   +P("letter",25,41,9,11,E("📜",6),"편지")
+   +P("boxd",49,42,10,10,E("🧰",6),"다이얼 상자",S.box)
+   +P("drawer",25,57,38,11,'<span class="dr"><u></u></span>',"책상 서랍",S.drawer);
+  $("inv").innerHTML=S.inv.length?S.inv.map(function(k){return '<button class="item" onclick="openItem(\''+k+'\')">'+NAMES[k]+'</button>'}).join(""):'<span class="mini">소지품이 없습니다</span>';
+  $("hc").textContent=S.hints;
+}
+function modal(h){$("m").innerHTML='<div class="card" role="dialog">'+h+'<div class="row"><button class="btn" onclick="closeM()">닫기</button></div></div>';$("m").style.display="flex"}
+function closeM(){$("m").style.display="none"}
+function codeForm(id,len,fn){return '<div class="row"><input id="code" inputmode="numeric" maxlength="'+len+'" aria-label="번호 입력"><button class="btn" onclick="'+fn+'()">확인</button></div>'}
+function val(){return $("code").value.trim()}
+function openObj(k){
+  if(S.over)return;
+  if(k=="plant"){
+    if(!S.fk){S.fk=1;give("fk");toast("화분 흙 속에서 녹슨 열쇠를 찾았습니다.");modal('<h2>🪴 화분</h2><p>흙 속에 녹슨 열쇠가 묻혀 있었습니다. 어디에 쓰는 열쇠일까요?</p>')}
+    else modal('<h2>🪴 화분</h2><p>더 이상 나올 것이 없습니다. 흙만 가득합니다.</p>');
+    return;
+  }
+  if(k=="mirror"){give("mirror");toast("거울을 얻었습니다. 편지를 비춰 보세요.");return}
+  if(k=="letter"){
+    var r=has("mirror");
+    modal('<h2>📜 편지</h2><div class="paper" style="text-align:'+(r?'left':'right')+'"><span style="display:inline-block;'+(r?'':'transform:scaleX(-1)')+'">시간은 뒤에서 흐른다.<br>가장 큰 시계의 등을 보라.</span></div><p class="mini">'+(r?'거울에 비춰 글씨를 읽었습니다.':'글씨가 모두 거꾸로 뒤집혀 있습니다. 비춰볼 물건이 책상 어딘가에 있을 텐데…')+'</p>'+(has("mirror")?'':'<div class="row"><button class="btn" onclick="getMirror()">책상 위 거울 집기</button></div>'));
+  }else if(k=="clock"){clockFront()}
+  else if(k=="drawer"){
+    if(!S.drawer){
+      if(has("dkey")){S.drawer=1;take("dkey");toast("서랍이 열렸습니다!");openObj("drawer")}
+      else modal('<h2>🗄️ 책상 서랍</h2><p>굳게 잠겨 있습니다.'+(has("fk")?' 녹슨 열쇠를 넣어 보지만 구멍이 훨씬 작아 맞지 않습니다.':' 작은 열쇠 구멍이 있습니다.')+'</p>');
+    }else modal('<h2>🗄️ 서랍 속</h2><p>오르골과 악보 카드가 들어 있습니다.</p><div class="paper">도=1, 레=2, 미=3, 파=4, 솔=5, 라=6, 시=7</div><div class="row"><button class="btn" onclick="play()">🎵 오르골 태엽 감기</button></div><p class="mini" id="notes">멜로디를 잘 들어 보세요.</p>');
+  }else if(k=="boxd"){
+    if(S.box)modal('<h2>🧰 다이얼 상자</h2><p>이미 열려 있습니다. 안은 비었습니다.</p>');
+    else modal('<h2>🧰 4자리 다이얼 상자</h2><p>숫자 네 개를 입력해 열어 보세요.</p>'+codeForm("c",4,"chkBox"));
+  }else if(k=="wall"){
+    var d=[["#2e6fd0",7,1985,"파랑"],["#e0b400",2,1992,"노랑"],["#d03a2e",9,2003,"빨강"],["#2f9a4c",4,2011,"초록"]];
+    modal('<h2>⏰ 벽시계 네 개</h2><div class="clocks">'+d.map(function(x){return '<div>'+clk(x[1],x[0])+x[3]+' 시계</div>'}).join("")+'</div><h2 style="margin-top:14px">🖼️ 가족사진 네 장</h2><div class="clocks">'+d.map(function(x){return '<div class="photo" style="border-color:'+x[0]+'">촬영<br><b>'+x[2]+'</b></div>'}).join("")+'</div><p class="mini">액자 색은 시계 테두리 색과 같습니다. 사진 뒷면에는 촬영 연도만 적혀 있습니다.</p>');
+  }else if(k=="safe"){
+    if(S.safe)modal('<h2>🔒 벽 금고</h2><p>이미 열려 있습니다.</p>');
+    else modal('<h2>🔒 벽 금고</h2><div class="paper">“가족이 모인 순서대로, 시간은 흐른다.”</div><p>네 자리 번호를 입력하세요.</p>'+codeForm("c",4,"chkSafe"));
+  }else if(k=="door"){
+    if(has("door")){win()}else modal('<h2>🚪 문</h2><p>굳게 잠겨 있습니다. 괘종시계가 올바른 시각에 울려야 열쇠가 나온다고 합니다.</p>');
+  }
+}
+function getMirror(){give("mirror");toast("거울을 얻었습니다.");openObj("letter")}
+function clk(n,c){
+  var s='<svg viewBox="-50 -50 100 100" width="76" role="img" aria-label="'+n+'시"><circle r="46" fill="#f6ecd0" stroke="'+c+'" stroke-width="7"/>';
+  for(var i=1;i<=12;i++){var a=i*Math.PI/6;s+='<text x="'+(35*Math.sin(a)).toFixed(1)+'" y="'+(-35*Math.cos(a)+3).toFixed(1)+'" font-size="9" text-anchor="middle" fill="#2b2014">'+i+'</text>'}
+  var a=n*Math.PI/6;
+  return s+'<line x1="0" y1="0" x2="0" y2="-38" stroke="#555" stroke-width="2"/><line x1="0" y1="0" x2="'+(24*Math.sin(a)).toFixed(1)+'" y2="'+(-24*Math.cos(a)).toFixed(1)+'" stroke="#2b2014" stroke-width="4.5" stroke-linecap="round"/><circle r="3" fill="#2b2014"/></svg>';
+}
+function clockFront(){
+  var h='<h2>🕰️ 괘종시계</h2><p>시계는 멈춰 있고, 시침과 분침이 12:30에 걸려 있습니다.</p><div class="row"><button class="btn" onclick="clockBack()">뒷면 살펴보기</button>';
+  if(has("wkey"))h+='<button class="btn" onclick="clockSet()">태엽 감고 시각 맞추기</button>';
+  modal(h+'</div>');
+}
+function clockBack(){
+  if(has("dkey")||S.drawer){modal('<h2>🕰️ 시계 뒷면</h2><p>먼지만 쌓여 있습니다. 열쇠는 이미 챙겼습니다.</p>');return}
+  give("dkey");toast("서랍 열쇠를 찾았습니다!");modal('<h2>🕰️ 시계 뒷면</h2><p>뒤판 틈에 작은 열쇠가 테이프로 붙어 있습니다. 🗝️</p>');
+}
+function clockSet(){
+  var p=function(n){return n<10?"0"+n:n};
+  modal('<h2>🕰️ 시각 맞추기</h2><div class="big">'+S.h+':'+p(S.m)+'</div><div class="row"><button class="btn" onclick="adj(1,0)">시 +</button><button class="btn" onclick="adj(-1,0)">시 −</button><button class="btn" onclick="adj(0,5)">분 +5</button><button class="btn" onclick="adj(0,-5)">분 −5</button></div><div class="row"><button class="btn" onclick="chkClock()">시각 확정</button></div>');
+}
+function adj(a,b){S.h=(S.h+a+11)%12+1;S.m=(S.m+b+60)%60;clockSet()}
+function chkClock(){
+  if(S.h==3&&S.m==0){S.clock=1;take("wkey");give("door");toast("종소리가 울렸습니다! 문 열쇠를 얻었습니다.");modal('<h2>🔔 댕— 댕— 댕—</h2><p>괘종시계가 세 번 울리고, 시계 하단의 비밀 칸이 열렸습니다. 문 열쇠가 들어 있습니다.</p>')}
+  else{toast("종이 울리지 않습니다. 시각이 틀린 모양입니다.")}
+}
+function play(){
+  var C=window.AudioContext||window.webkitAudioContext;
+  try{
+    var a=new C(),f=[261.6,329.6,392,293.7];
+    f.forEach(function(q,i){var o=a.createOscillator(),g=a.createGain();o.frequency.value=q;o.type="triangle";o.connect(g);g.connect(a.destination);var t=a.currentTime+i*0.6;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.3,t+.03);g.gain.exponentialRampToValueAtTime(.0001,t+.55);o.start(t);o.stop(t+.6)});
+  }catch(e){}
+  $("notes").innerHTML='<span class="kb">'+[0,1,2,3,4,5,6].map(function(i){return '<b id="k'+i+'"></b>'}).join("")+'</span>';
+  [0,2,4,1].forEach(function(n,i){setTimeout(function(){var e=$("k"+n);if(e){e.className="on";setTimeout(function(){e.className=""},450)}},i*600)});
+}
+function chkBox(){
+  if(val()=="1352"){S.box=1;give("uv");give("watch");toast("상자가 열렸습니다!");modal('<h2>🧰 열렸다!</h2><p>안에서 UV 손전등과 회중시계가 나왔습니다.</p>')}
+  else toast("딸깍… 열리지 않습니다.");
+}
+function chkSafe(){
+  if(val()=="7294"){S.safe=1;give("wkey");toast("금고가 열렸습니다!");modal('<h2>🔒 열렸다!</h2><p>금고 안에 황동 태엽 열쇠가 있습니다.</p>')}
+  else toast("경고음이 짧게 울립니다. 번호가 틀렸습니다.");
+}
+function openItem(k){
+  if(k=="watch"){
+    if(has("uv"))modal('<h2>⌚ 회중시계 (UV)</h2><p>뒷면에 숨은 글씨가 푸르게 빛납니다.</p><div class="paper">내가 마지막으로 시계를 멈춘 시각,<br>두 바늘은 서로 직각이었다.<br>정오가 지나 처음으로 맞이한 그 정각.</div>');
+    else modal('<h2>⌚ 회중시계</h2><p>뒷면에 희미한 자국이 있지만 읽을 수 없습니다. 특수한 빛이 필요해 보입니다.</p>');
+  }else{
+    var d={mirror:"글씨를 비춰 읽을 수 있는 작은 거울.",dkey:"작고 낡은 열쇠. 어딘가의 서랍에 맞을 것 같습니다.",uv:"보이지 않는 글씨를 비추는 손전등. 회중시계에 비춰 보세요.",wkey:"괘종시계의 태엽을 감는 황동 열쇠.",door:"작업실 문을 여는 마지막 열쇠.",fk:"흙투성이의 녹슨 열쇠. 크고 투박해서 어디에 쓰는 것인지 알 수 없습니다."};
+    modal('<h2>'+NAMES[k]+'</h2><p>'+d[k]+'</p>');
+  }
+}
+var HINTS=[
+  ["책상 위 편지와 거울을 살펴보세요.","편지는 거울을 들어야 읽을 수 있습니다. 시계의 ‘등’은 어디일까요?","괘종시계의 뒷면에서 서랍 열쇠를 찾으세요."],
+  ["오르골을 울리면 건반이 순서대로 켜집니다. 어느 건반인지 기억하세요.","건반은 왼쪽부터 도, 레, 미… 순서입니다. 악보 카드의 숫자표와 연결하세요.","켜지는 건반은 왼쪽에서 1번째, 3번째, 5번째, 2번째입니다. 번호는 1352입니다."],
+  ["벽시계 테두리 색과 가족사진 액자 색을 비교해 보세요.","사진 연도가 빠른 순서대로 각 시계의 시침 숫자를 읽으세요.","파랑 7, 노랑 2, 빨강 9, 초록 4. 금고 번호는 7294입니다."],
+  ["회중시계에 UV 손전등을 비춰 보세요.","두 바늘이 직각이 되는 정시 중 정오 이후 첫 번째는 언제일까요?","3시 정각입니다. 괘종시계를 3:00에 맞추세요."]
+];
+function hint(){
+  if(S.over)return;
+  var g=!S.drawer?0:!S.box?1:!S.safe?2:3;
+  if(g==3&&S.clock){toast("이제 문으로 가세요!");return}
+  var i=Math.min(S.hs[g],2);S.hs[g]++;S.hints++;draw();
+  modal('<h2>💡 힌트 '+(i+1)+'/3</h2><p>'+HINTS[g][i]+'</p>');
+}
+function fmt(s){var m=Math.floor(s/60),x=s%60;return (m<10?"0":"")+m+":"+(x<10?"0":"")+x}
+var tm=setInterval(function(){
+  if(S.over)return;S.t--;$("timer").textContent=fmt(S.t);
+  if(S.t<=300)$("timer").className="low";
+  if(S.t<=0){S.over=1;clearInterval(tm);closeM();$("end").innerHTML='<div class="card"><h2>⏰ 시간 초과</h2><p>종은 끝내 울리지 않았습니다. 다시 도전해 보세요.</p><div class="row"><button class="btn" onclick="location.reload()">다시 시작</button></div></div>';$("end").style.display="flex"}
+},1000);
+function win(){
+  S.over=1;clearInterval(tm);closeM();
+  var used=3600-S.t,r=S.hints<=2&&used<1800?"S":S.hints<=5&&used<2700?"A":"B";
+  $("end").innerHTML='<div class="card"><h2>🚪 탈출 성공!</h2><p>문이 열리자 쪽지가 떨어집니다.</p><div class="paper">“멈춘 시계를 다시 울려 줘서 고맙소. 나는 시간을 되감는 법을 찾으러 먼저 떠납니다. — 한서진”</div><p>걸린 시간 <b>'+fmt(used)+'</b> · 사용한 힌트 <b>'+S.hints+'개</b> · 등급 <b>'+r+'</b></p><div class="row"><button class="btn" onclick="location.reload()">다시 하기</button></div></div>';
+  $("end").style.display="flex";
+}
+draw();
+</script>
+</body>
+</html>
