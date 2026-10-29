@@ -49,5 +49,10 @@
     "name": "WWII: Frontline Escaper",
     "nickname": "2026",
     "file": "wwgame.html"
+  },
+  {
+    "name": "할아버지의 금고",
+    "nickname": "하로",
+    "file": "Grandfather_game.html"
   }
 ]
