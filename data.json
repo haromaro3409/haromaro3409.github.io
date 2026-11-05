@@ -56,5 +56,23 @@
     "date": "10/28",
     "title": "Kaggle-titanic competition_basic report",
     "url": "https://colab.research.google.com/drive/1EdyF7mR7qe2QWAF0ShEedw2_VGCYJin3?usp=sharing"
-  }  
+  },
+  {
+    "number": 10,
+    "date": "11/05",
+    "title": "qnn basic",
+    "url": "https://colab.research.google.com/drive/1pvZ5I8uwuL5M9t-tX0G6R7Z12WJbwSA7?usp=sharing"
+  },
+  {
+    "number": 11,
+    "date": "11/05",
+    "title": "iris mlp vs qnn",
+    "url": "https://colab.research.google.com/drive/1I0qVBTo_vPc9SGC2IMZxS-Nik9tcCUs6?usp=sharing"
+  },
+  {
+    "number": 12,
+    "date": "11/05",
+    "title": "qnn iris explained data",
+    "url": "https://colab.research.google.com/drive/1E9lAEwgH4CcqW_oFqyGasynrxP4Q1Mzl?usp=sharing"
+  }
 ]
