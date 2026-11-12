@@ -59,5 +59,15 @@
     "name": "시계공의 마지막 주문",
     "nickname": "SS_gamer",
     "file": "last_order.html"
-  }
+  },
+  {
+    "name": "제 7 관제실 탈출하기",
+    "nickname": "SS_gamer",
+    "file": "7rd_monitorroom_escape.html"
+  },
+  {
+    "name": "대포 좀비 디펜스",
+    "nickname": "SS_gamer",
+    "file": "cannon_zombie_defense.html"
+  },
 ]
