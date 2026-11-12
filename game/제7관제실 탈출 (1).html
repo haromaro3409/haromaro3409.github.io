@@ -1,0 +1,677 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>제7관제실 탈출</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 레이아웃: 청사진 풍 관제실. 위에 큰 타이머, 왼쪽에 클릭 가능한 방 단면도, 오른쪽에 단서 노트와 힌트. */
+:root {
+  --bg: #0c2340;
+  --grid: rgba(111, 155, 201, 0.10);
+  --panel: #12315a;
+  --panel-2: #0f2a4d;
+  --line: #6f9bc9;
+  --line-soft: #2b5283;
+  --fg: #e7f0f9;
+  --fg-dim: #a3bdd6;
+  --accent: #ffcf3f;
+  --accent-ink: #1a1500;
+  --danger: #ff7a66;
+  --ok: #6fe0a8;
+  --paper: #e9f1f7;
+  --ink: #17335a;
+  --ink-soft: rgba(23, 51, 90, 0.28);
+  --screen: #07182b;
+  --bk-red: #f0686c;
+  --bk-orange: #f4a05a;
+  --bk-yellow: #f4c542;
+  --bk-green: #4cc38a;
+  --bk-blue: #5aaaf8;
+  --bk-purple: #b497f7;
+  --f-display: 'Black Han Sans', 'Noto Sans KR', sans-serif;
+  --f-body: 'Noto Sans KR', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.6;
+  padding-block: 20px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; }
+.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+h1 { font: 400 clamp(30px, 6vw, 46px)/1.05 var(--f-display); margin: 0; text-wrap: balance; }
+.timerbox { min-width: min(100%, 220px); }
+.timer { font: 700 clamp(44px, 9vw, 68px)/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.timer.low { color: var(--danger); }
+.bar { height: 6px; background: var(--line-soft); margin-top: 8px; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
+.timer.low + .bar i { background: var(--danger); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.stage { border: 1px solid var(--line); background: var(--panel-2); padding: 8px; min-width: 0; }
+.stage svg { display: block; width: 100%; height: auto; }
+.stage-note { margin: 8px 4px 2px; font: 500 12px var(--f-mono); color: var(--fg-dim); letter-spacing: 0.04em; }
+.side { display: grid; gap: 16px; min-width: 0; }
+.panel { border: 1px solid var(--line-soft); background: var(--panel); padding: 14px; min-width: 0; }
+h2 { font: 700 12px var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 10px; color: var(--fg-dim); }
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.list li { font-size: 14px; line-height: 1.5; border-left: 2px solid var(--accent); padding-left: 10px; overflow-wrap: anywhere; }
+.list li.empty { border-left-color: var(--line-soft); color: var(--fg-dim); }
+.list li b { font-family: var(--f-mono); font-weight: 700; color: var(--accent); }
+.hint-btn { margin-bottom: 10px; width: 100%; }
+
+.btn { font: 700 15px var(--f-body); padding: 10px 16px; min-height: 44px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:focus-visible, .x:focus-visible, input:focus-visible, .sw:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+/* 방 */
+.wall { fill: var(--panel); }
+.floor { fill: var(--panel-2); stroke: var(--line-soft); }
+.hot { cursor: pointer; }
+.hot:focus { outline: none; }
+.only-hard { display: none; }
+.is-hard .only-hard { display: inline; }
+.edge { stroke: var(--line); stroke-width: 2; transition: stroke 0.15s; }
+.hot:hover .edge, .hot:focus-visible .edge { stroke: var(--accent); stroke-width: 3.5; }
+.tag { font: 700 14px var(--f-body); fill: var(--fg); text-anchor: middle; paint-order: stroke; stroke: var(--panel-2); stroke-width: 4px; }
+.hot:hover .tag, .hot:focus-visible .tag { fill: var(--accent); }
+.tag.done { fill: var(--ok); }
+.scrawl { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; opacity: 0.55; }
+.scr-txt { font: 700 13px var(--f-mono); fill: var(--accent); }
+
+/* 시계 */
+.c-face { fill: var(--paper); stroke: var(--line); stroke-width: 2; }
+.c-tick { stroke: var(--ink); stroke-width: 0.8; }
+.c-num { font: 700 9px var(--f-mono); fill: var(--ink); }
+.c-hour { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.c-min { stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
+.c-pin { fill: var(--ink); }
+.bigclock { display: block; width: min(100%, 320px); margin: 0 auto; }
+
+/* 팝업 */
+#layer { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(6, 16, 30, 0.82); }
+.sheet { width: min(560px, 100%); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); padding: 20px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.sheet h3 { font: 400 26px/1.15 var(--f-display); margin: 0; text-wrap: balance; }
+.x { font: 700 14px var(--f-body); min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.sheet p { margin: 0 0 12px; }
+.dim { color: var(--fg-dim); }
+.rules { margin: 0 0 16px; padding-left: 20px; }
+.rules li { margin-bottom: 4px; }
+.msg { min-height: 24px; margin: 8px 0 0; font-weight: 700; color: var(--danger); }
+.shake { animation: shake 0.3s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+@keyframes pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: no-preference) { .timer.low { animation: pulse 1s steps(2) infinite; } }
+@media (prefers-reduced-motion: reduce) { .shake { animation: none; } }
+
+/* 난이도 선택 */
+.modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
+@media (max-width: 520px) { .modes { grid-template-columns: minmax(0, 1fr); } }
+.mode { position: relative; display: grid; align-content: start; gap: 4px; padding: 12px; border: 1px solid var(--line-soft); background: var(--panel-2); cursor: pointer; min-width: 0; }
+.mode input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.mode:has(input:checked) { border-color: var(--accent); background: var(--bg); box-shadow: inset 0 0 0 1px var(--accent); }
+.mode:has(input:focus-visible) { outline: 3px solid var(--fg); outline-offset: 2px; }
+.m-name { font: 400 22px/1.1 var(--f-display); }
+.m-time { font: 700 14px var(--f-mono); color: var(--accent); }
+.m-desc { font-size: 13px; line-height: 1.45; color: var(--fg-dim); }
+
+.board { background: var(--paper); color: var(--ink); padding: 18px; }
+.board .small { font: 500 12px var(--f-mono); opacity: 0.6; margin: 0 0 6px; }
+.eq { display: flex; justify-content: space-between; gap: 12px; font: 700 clamp(20px, 5.5vw, 28px) var(--f-mono); border-bottom: 2px dashed var(--ink-soft); padding: 10px 0; }
+.board .foot { margin: 12px 0 0; font-weight: 700; }
+
+.dials { display: flex; gap: 12px; justify-content: center; margin: 16px 0 8px; }
+.dial { display: grid; gap: 6px; justify-items: center; }
+.dial label { font: 700 26px var(--f-mono); color: var(--accent); }
+.dial input, .codein { text-align: center; font: 700 36px var(--f-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
+.dial input { width: min(64px, 19vw); height: 76px; }
+.codein { width: 100%; height: 76px; letter-spacing: 0.4em; padding-left: 0.4em; }
+.center { text-align: center; }
+.note { background: var(--paper); color: var(--ink); padding: 16px; font-weight: 500; }
+.note .cipher { font: 700 clamp(28px, 8vw, 36px) var(--f-mono); letter-spacing: 0.2em; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.note .cap { margin: 0 0 4px; opacity: 0.7; }
+.crt { background: var(--screen); border: 1px solid var(--line); padding: 16px; font: 500 14px/1.8 var(--f-mono); color: var(--accent); overflow-wrap: anywhere; }
+.crt input { width: 100%; margin-top: 8px; font: 700 22px var(--f-mono); letter-spacing: 0.2em; text-transform: uppercase; background: transparent; color: var(--fg); border: 1px solid var(--line); padding: 10px; }
+.shelf { display: flex; gap: 8px; justify-content: center; align-items: flex-end; padding: 18px 8px 0; background: var(--panel-2); border-bottom: 10px solid var(--line-soft); }
+.book { flex: 1 1 0; max-width: 58px; min-width: 0; display: grid; justify-items: center; align-content: start; gap: 6px; padding: 12px 0; font: 700 30px var(--f-mono); color: #0a1626; }
+.book small { font: 700 12px var(--f-body); }
+.book.red { background: var(--bk-red); } .book.orange { background: var(--bk-orange); } .book.yellow { background: var(--bk-yellow); } .book.green { background: var(--bk-green); } .book.blue { background: var(--bk-blue); } .book.purple { background: var(--bk-purple); }
+
+.plate { background: var(--paper); color: var(--ink); padding: 14px 16px; font-weight: 700; }
+.plate p { margin: 0 0 6px; }
+.plate p:last-child { margin: 0; }
+.sws { display: flex; gap: 12px; justify-content: center; margin: 16px 0 8px; }
+.sw { display: grid; gap: 4px; justify-items: center; width: 84px; padding: 10px 0; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; font: 700 22px var(--f-mono); }
+.sw small { font: 700 12px var(--f-body); color: var(--fg-dim); }
+.sw[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.sw[aria-pressed="true"] small { color: var(--accent-ink); }
+
+#toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; background: var(--danger); color: #1b0500; font-weight: 700; padding: 10px 16px; max-width: calc(100% - 32px); }
+</style>
+
+<div class="wrap" id="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow" id="eyebrow">밀실 · 난이도 선택</p>
+      <h1>제7관제실 탈출</h1>
+    </div>
+    <div class="timerbox">
+      <div id="timer" class="timer" aria-live="off">5:00</div>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <svg id="room" viewBox="0 0 800 400" role="group" aria-label="제7관제실">
+        <rect class="wall" width="800" height="330"/>
+        <rect class="floor" y="330" width="800" height="70"/>
+
+        <g class="hot" data-kind="shelf" tabindex="0" role="button" aria-label="책장">
+          <rect class="edge" x="30" y="90" width="170" height="240" fill="var(--panel-2)"/>
+          <line class="edge" x1="30" y1="170" x2="200" y2="170"/>
+          <line class="edge" x1="30" y1="250" x2="200" y2="250"/>
+          <rect x="42" y="112" width="22" height="58" fill="var(--bk-green)"/>
+          <rect x="68" y="124" width="22" height="46" fill="var(--bk-blue)"/>
+          <rect x="94" y="108" width="22" height="62" fill="var(--bk-red)"/>
+          <rect x="120" y="120" width="22" height="50" fill="var(--bk-purple)"/>
+          <rect x="146" y="114" width="22" height="56" fill="var(--bk-yellow)"/>
+          <rect x="42" y="196" width="40" height="54" fill="var(--line-soft)"/>
+          <rect x="86" y="206" width="30" height="44" fill="var(--line-soft)"/>
+          <rect x="130" y="190" width="50" height="60" fill="var(--line-soft)"/>
+          <rect x="42" y="276" width="70" height="54" fill="var(--line-soft)"/>
+          <text class="tag" x="115" y="366">책장</text>
+        </g>
+
+        <g class="hot only-hard" data-kind="breaker" tabindex="0" role="button" aria-label="배전반">
+          <rect class="edge" x="60" y="30" width="110" height="50" fill="var(--panel-2)"/>
+          <rect x="80" y="44" width="14" height="24" fill="var(--line-soft)"/>
+          <rect x="108" y="44" width="14" height="24" fill="var(--line-soft)"/>
+          <rect x="136" y="44" width="14" height="24" fill="var(--line-soft)"/>
+          <text class="tag" id="tag-power" x="115" y="22">배전반</text>
+        </g>
+
+        <g class="hot" data-kind="board" tabindex="0" role="button" aria-label="화이트보드">
+          <rect class="edge" x="230" y="40" width="250" height="130" fill="var(--paper)"/>
+          <path class="scrawl" d="M250 66h70M340 66h28M250 94h96M366 94h40M250 122h54M326 122h82M250 148h40M310 148h60"/>
+          <text class="tag" x="355" y="192">화이트보드</text>
+        </g>
+
+        <g class="hot" data-kind="clock" tabindex="0" role="button" aria-label="벽시계">
+          <svg id="miniClock" x="497" y="52" width="96" height="96" viewBox="-60 -60 120 120"></svg>
+          <text class="tag" x="545" y="170">벽시계</text>
+        </g>
+
+        <g class="hot" data-kind="term" tabindex="0" role="button" aria-label="단말기">
+          <rect class="edge" x="300" y="222" width="120" height="66" fill="var(--screen)"/>
+          <text class="scr-txt" x="312" y="260">&gt; _</text>
+          <rect class="edge" x="230" y="292" width="250" height="12" fill="var(--panel-2)"/>
+          <line class="edge" x1="246" y1="304" x2="246" y2="330"/>
+          <line class="edge" x1="464" y1="304" x2="464" y2="330"/>
+          <text class="tag" id="tag-term" x="355" y="366">단말기</text>
+        </g>
+
+        <g class="hot" data-kind="safe" tabindex="0" role="button" aria-label="금고">
+          <rect class="edge" x="510" y="236" width="120" height="94" fill="var(--panel-2)"/>
+          <circle class="edge" cx="570" cy="283" r="20" fill="none"/>
+          <line class="edge" x1="570" y1="283" x2="570" y2="268"/>
+          <text class="tag" id="tag-safe" x="570" y="366">금고</text>
+        </g>
+
+        <g class="hot" data-kind="door" tabindex="0" role="button" aria-label="출구 문">
+          <rect class="edge" x="660" y="90" width="120" height="240" fill="var(--panel-2)"/>
+          <rect class="edge" x="738" y="186" width="30" height="48" fill="var(--screen)"/>
+          <circle cx="747" cy="198" r="2.5" fill="var(--accent)"/><circle cx="759" cy="198" r="2.5" fill="var(--accent)"/>
+          <circle cx="747" cy="210" r="2.5" fill="var(--accent)"/><circle cx="759" cy="210" r="2.5" fill="var(--accent)"/>
+          <circle cx="747" cy="222" r="2.5" fill="var(--accent)"/><circle cx="759" cy="222" r="2.5" fill="var(--accent)"/>
+          <text class="tag" id="tag-door" x="720" y="366">출구</text>
+        </g>
+      </svg>
+      <p class="stage-note">물건을 눌러 살펴보세요. 팝업을 닫아도 시간은 계속 흐릅니다.</p>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>단서 노트</h2>
+        <ol id="notes" class="list"><li class="empty">아직 찾은 단서가 없습니다.</li></ol>
+      </section>
+      <section class="panel">
+        <h2>힌트</h2>
+        <button id="hintBtn" class="btn ghost hint-btn" disabled>힌트 받기</button>
+        <ul id="hintlog" class="list"><li class="empty">막히면 현재 단계의 힌트를 받을 수 있습니다.</li></ul>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div id="layer" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-head">
+      <h3 id="sheetTitle"></h3>
+      <button id="closeBtn" class="x" type="button">닫기</button>
+    </div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+
+  var MODES = {
+    easy: {
+      name: '쉬움', total: 180000, wrong: 3, hintCost: 10, locks: 3,
+      desc: '잠금 3개. 단서가 거의 그대로 이어집니다.',
+      eqs: [['▲ + ▲ + ▲', '= 12'], ['▲ + ■', '= 11'], ['● + ●', '= ▲ + 2']],
+      foot: '같은 기호는 같은 숫자다. 모두 1부터 9 사이.',
+      dials: ['●', '▲', '■'], safe: '347',
+      noteBig: 'STAR', noteText: '단말기 비밀번호다.',
+      noteList: '<b>쪽지</b> 단말기 비밀번호는 STAR.',
+      pass: 'STAR', power: false,
+      clock: { h: 3, m: 0, mirror: false, caption: '멈춰 있는 벽시계다. 3시를 가리킨다.' },
+      books: [['green', 5, '초록'], ['blue', 2, '파랑'], ['red', 3, '빨강'], ['yellow', 8, '노랑']],
+      termMsg: '책 번호를 무지개 색의 순서대로 나열하라.',
+      termNote: '책 번호를 무지개 색 순서로 나열.',
+      door: '3852',
+      hints: [
+        ['화이트보드의 첫 식은 ▲ 세 개를 더해 12입니다.', '▲=4, ■=7, ●=3 입니다. 금고 다이얼에 붙은 기호 순서대로 넣으세요.'],
+        ['금고에서 나온 쪽지에 비밀번호가 적혀 있습니다.', '비밀번호는 STAR 입니다.'],
+        ['무지개 순서는 빨주노초파남보입니다.', '빨강 3, 노랑 8, 초록 5, 파랑 2 순서로 3852 입니다.']
+      ]
+    },
+    normal: {
+      name: '보통', total: 300000, wrong: 5, hintCost: 20, locks: 3,
+      desc: '거울 시계와 암호 해독이 들어갑니다.',
+      eqs: [['▲ + ▲ + ▲', '= 21'], ['▲ + ■ + ■', '= 15'], ['■ × ●', '= ▲ + 5'], ['◆ ÷ ■', '= ● − 1']],
+      foot: '같은 기호는 같은 숫자다. 모두 1부터 9 사이.',
+      dials: ['■', '▲', '◆'], safe: '478',
+      noteBig: 'TWGNY', noteText: '알파벳을 N칸 뒤로 밀어 만든 영어 단어다. N은 거울이 아닌 현실의 시각(시)이다.',
+      noteList: '<b>쪽지</b> TWGNY. 알파벳을 N칸 뒤로 밀어 만든 영어 단어. N은 현실의 시각(시).',
+      pass: 'ORBIT', power: false,
+      clock: { h: 5, m: 0, mirror: true, caption: '벽 거울에 비친 시계다.' },
+      books: [['green', 9, '초록'], ['blue', 2, '파랑'], ['red', 6, '빨강'], ['purple', 4, '보라'], ['yellow', 1, '노랑']],
+      termMsg: '책 번호를 무지개 색의 순서대로 나열하라.<br>단, 가장 큰 숫자가 적힌 책은 위조본이다. 제외하라.',
+      termNote: '책 번호를 무지개 색 순서로 나열. 가장 큰 숫자의 책은 제외.',
+      door: '6124',
+      hints: [
+        ['화이트보드의 식을 위에서부터 차례로 푸세요. 첫 식은 ▲ 세 개를 더해 21입니다.', '▲=7, ■=4, ●=3, ◆=8 입니다. 금고 다이얼에 붙은 기호 순서대로 넣으세요.'],
+        ['시계는 거울에 비친 모습입니다. 거울 속 숫자를 직접 읽어 보세요.', '진짜 시각은 5시입니다. 암호문의 각 글자를 알파벳 순서로 5칸 앞으로 당겨 읽으세요.'],
+        ['단말기 메시지의 규칙대로 책을 늘어놓으세요. 무지개 순서는 빨주노초파남보입니다.', '빨강 6, 노랑 1, 초록 9, 파랑 2, 보라 4 중에서 가장 큰 수를 뺀 나머지가 코드입니다.']
+      ]
+    },
+    hard: {
+      name: '어려움', total: 600000, wrong: 10, hintCost: 30, locks: 4,
+      desc: '잠금 4개. 전원 논리 퍼즐과 더 긴 암호가 추가됩니다.',
+      eqs: [['▲ × ▲', '= 36'], ['▲ + ■ + ■', '= 24'], ['■ × ●', '= ▲ × 3'], ['◆ + ●', '= ■ + ▲ − 5']],
+      foot: '같은 기호는 같은 숫자다. 모두 1부터 9 사이.',
+      dials: ['◆', '▲', '●', '■'], safe: '8629',
+      noteBig: 'ZPNUHS', noteText: '알파벳을 N칸 뒤로 밀어 만든 영어 단어다. N은 거울이 아닌 현실 시각의 시에 분을 10으로 나눈 값을 더한 수다.',
+      noteList: '<b>쪽지</b> ZPNUHS. 알파벳을 N칸 뒤로 밀어 만든 영어 단어. N = 현실 시각의 시 + 분 ÷ 10.',
+      pass: 'SIGNAL', power: true,
+      clock: { h: 3, m: 40, mirror: true, caption: '벽 거울에 비친 시계다.' },
+      books: [['green', 8, '초록'], ['red', 7, '빨강'], ['blue', 1, '파랑'], ['orange', 3, '주황'], ['purple', 2, '보라'], ['yellow', 5, '노랑']],
+      termMsg: '책 번호를 무지개 색의 순서대로 나열하라.<br>단, 가장 큰 숫자와 가장 작은 숫자가 적힌 책은 위조본이다. 제외하라.',
+      termNote: '책 번호를 무지개 색 순서로 나열. 가장 큰 수와 가장 작은 수의 책은 제외.',
+      door: '7352',
+      hints: [
+        ['식을 위에서부터 풀어 보세요. 첫 식은 ▲ × ▲ = 36 입니다.', '▲=6, ■=9, ●=2, ◆=8 입니다. 금고 다이얼의 기호 순서(◆ ▲ ● ■)대로 넣으세요.'],
+        ['명판의 세 문장을 모두 만족하는 조합은 하나뿐입니다. 켜진 스위치가 정확히 몇 개인지부터 따져 보세요.', 'A와 B는 꺼짐, C만 켜짐 입니다.'],
+        ['시계를 현실 시각으로 되돌려 읽으세요. 시침과 분침 모두 좌우가 뒤집혀 보입니다.', '현실 시각은 3시 40분이라 N = 3 + 4 = 7 입니다. 암호문을 7칸 앞으로 당겨 읽으세요.'],
+        ['단말기 규칙대로 책을 정렬하세요. 무지개 순서는 빨주노초파남보(남색 책은 없음).', '빨강 7, 주황 3, 노랑 5, 초록 8, 파랑 1, 보라 2 에서 가장 큰 수(8)와 가장 작은 수(1)를 뺀 나머지입니다.']
+      ]
+    }
+  };
+
+  var S, cfg = MODES.normal, selected = 'normal';
+  var layer = $('#layer'), sheet = $('#sheetBody'), sheetTitle = $('#sheetTitle'), closeBtn = $('#closeBtn');
+  var timerEl = $('#timer'), barEl = $('#bar'), notesEl = $('#notes'), hintLog = $('#hintlog'), hintBtn = $('#hintBtn');
+  var closable = true, toastTimer = null, tickId = null;
+
+  function freshState() {
+    return { started: false, ended: false, safe: false, power: false, term: false, penalty: 0, t0: 0, hints: [0, 0, 0, 0], notes: {}, sw: [false, false, false] };
+  }
+
+  function clockInner(c) {
+    var s = '<g' + (c.mirror ? ' transform="scale(-1,1)"' : '') + '><circle r="54" class="c-face"/>';
+    var i, a, r1;
+    for (i = 0; i < 60; i++) {
+      a = i * 6 * Math.PI / 180; r1 = i % 5 ? 51 : 47;
+      s += '<line class="c-tick" x1="' + (r1 * Math.sin(a)).toFixed(2) + '" y1="' + (-r1 * Math.cos(a)).toFixed(2) + '" x2="' + (54 * Math.sin(a)).toFixed(2) + '" y2="' + (-54 * Math.cos(a)).toFixed(2) + '"/>';
+    }
+    for (i = 1; i <= 12; i++) {
+      a = i * 30 * Math.PI / 180;
+      s += '<text class="c-num" text-anchor="middle" dominant-baseline="central" x="' + (40 * Math.sin(a)).toFixed(2) + '" y="' + (-40 * Math.cos(a)).toFixed(2) + '">' + i + '</text>';
+    }
+    var ha = ((c.h % 12) + c.m / 60) * 30 * Math.PI / 180, ma = c.m * 6 * Math.PI / 180;
+    s += '<line class="c-hour" x1="0" y1="0" x2="' + (26 * Math.sin(ha)).toFixed(2) + '" y2="' + (-26 * Math.cos(ha)).toFixed(2) + '"/>';
+    s += '<line class="c-min" x1="0" y1="0" x2="' + (38 * Math.sin(ma)).toFixed(2) + '" y2="' + (-38 * Math.cos(ma)).toFixed(2) + '"/><circle class="c-pin" r="3"/></g>';
+    return s;
+  }
+
+  function fmt(ms) {
+    var s = Math.ceil(ms / 1000), m = Math.floor(s / 60), r = s % 60;
+    return m + ':' + (r < 10 ? '0' : '') + r;
+  }
+  function remaining() { return Math.max(0, cfg.total - (Date.now() - S.t0) - S.penalty); }
+  function tick() {
+    if (!S.started || S.ended) return;
+    var rem = remaining();
+    timerEl.textContent = fmt(rem);
+    timerEl.classList.toggle('low', rem < 30000);
+    barEl.style.transform = 'scaleX(' + (rem / cfg.total).toFixed(4) + ')';
+    if (rem <= 0) end(false);
+  }
+  function toast(msg) {
+    var t = $('#toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 1800);
+  }
+  function penalize(sec, why) {
+    S.penalty += sec * 1000;
+    toast(why + ' −' + sec + '초');
+    tick();
+  }
+  function addNote(id, html) {
+    if (S.notes[id]) return;
+    S.notes[id] = true;
+    var empty = notesEl.querySelector('.empty');
+    if (empty) empty.remove();
+    var li = document.createElement('li');
+    li.innerHTML = html;
+    notesEl.appendChild(li);
+  }
+  function setTag(id, text, done) {
+    var el = $('#' + id);
+    el.textContent = text;
+    el.classList.toggle('done', !!done);
+  }
+
+  function show(title, html, canClose) {
+    closable = canClose !== false;
+    sheetTitle.textContent = title;
+    sheet.innerHTML = html;
+    closeBtn.hidden = !closable;
+    layer.hidden = false;
+    var f = sheet.querySelector('input, button');
+    if (f) f.focus(); else if (closable) closeBtn.focus();
+  }
+  function close() { if (closable) layer.hidden = true; }
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !layer.hidden) close(); });
+
+  function shake(msg) {
+    var m = sheet.querySelector('.msg');
+    if (m) m.textContent = msg;
+    var s = layer.querySelector('.sheet');
+    s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake');
+  }
+
+  /* 각 물건 */
+  function viewBoard() {
+    addNote('board', '<b>화이트보드</b> 기호 식 ' + cfg.eqs.length + '줄. 같은 기호는 같은 숫자(1~9).');
+    var h = '<div class="board"><p class="small">점검표 3/14 · 지우지 말 것</p>';
+    cfg.eqs.forEach(function (q) { h += '<div class="eq"><span>' + q[0] + '</span><span>' + q[1] + '</span></div>'; });
+    h += '<p class="foot">' + cfg.foot + '</p></div>';
+    show('화이트보드', h);
+  }
+  function viewClock() {
+    if (cfg.clock.mirror) addNote('clock', '<b>벽시계</b> 거울에 비친 모습이다.');
+    show('벽시계', '<svg class="bigclock" viewBox="-60 -60 120 120" role="img" aria-label="벽시계">' + clockInner(cfg.clock) + '</svg><p class="dim center" style="margin-top:12px">' + cfg.clock.caption + '</p>');
+  }
+  function viewShelf() {
+    addNote('shelf', '<b>책장</b> ' + cfg.books.map(function (b) { return b[2] + ' ' + b[1]; }).join(' · ') + ' (선반 왼쪽부터 ' + cfg.books.map(function (b) { return b[2]; }).join(', ') + ')');
+    var hs = [150, 130, 160, 140, 125, 145];
+    var h = '<p class="dim">등에 번호가 적힌 책 ' + cfg.books.length + '권이 꽂혀 있다.</p><div class="shelf">';
+    cfg.books.forEach(function (b, i) {
+      h += '<div class="book ' + b[0] + '" style="height:' + hs[i] + 'px"><span>' + b[1] + '</span><small>' + b[2] + '</small></div>';
+    });
+    show('책장', h + '</div>');
+  }
+  function digits() {
+    var ins = sheet.querySelectorAll('input.d');
+    ins.forEach(function (inp, i) {
+      inp.addEventListener('input', function () {
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 1);
+        if (inp.value && ins[i + 1]) ins[i + 1].focus();
+      });
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Backspace' && !inp.value && ins[i - 1]) ins[i - 1].focus();
+      });
+    });
+  }
+  function viewSafe() {
+    addNote('safe', '<b>금고</b> ' + cfg.dials.length + '자리 다이얼. 칸마다 기호가 붙어 있다: ' + cfg.dials.join(' '));
+    if (S.safe) {
+      show('금고 (열림)', '<div class="note"><p class="cap">안에서 나온 쪽지</p><div class="cipher">' + cfg.noteBig + '</div><p style="margin:0">' + cfg.noteText + '</p></div>');
+      return;
+    }
+    var h = '<form id="f" autocomplete="off"><div class="dials">';
+    cfg.dials.forEach(function (sym, i) {
+      h += '<div class="dial"><label for="d' + i + '">' + sym + '</label><input class="d" id="d' + i + '" inputmode="numeric" maxlength="1" pattern="[0-9]"></div>';
+    });
+    h += '</div><p class="msg center" id="m"></p><button class="btn" style="width:100%" type="submit">열기</button></form>';
+    show('금고', h);
+    digits();
+    $('#f').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = '';
+      cfg.dials.forEach(function (s, i) { v += $('#d' + i).value; });
+      if (v === cfg.safe) {
+        S.safe = true;
+        addNote('cipher', cfg.noteList);
+        setTag('tag-safe', '금고 · 열림', true);
+        viewSafe();
+      } else {
+        penalize(cfg.wrong, '틀렸습니다');
+        shake('열리지 않는다.');
+      }
+    });
+  }
+  function viewBreaker() {
+    addNote('breaker', '<b>배전반</b> 스위치 A·B·C와 명판의 문장 세 개. 단말기 전원과 연결되어 있다.');
+    if (S.power) {
+      show('배전반 (가동 중)', '<p>단말기에 전원이 들어왔다.</p>');
+      return;
+    }
+    var names = ['A', 'B', 'C'];
+    var h = '<div class="plate"><p>① A와 B는 항상 같은 상태다.</p><p>② B와 C는 서로 다른 상태다.</p><p>③ 켜진 스위치는 정확히 하나다.</p></div><div class="sws">';
+    names.forEach(function (n, i) {
+      h += '<button type="button" class="sw" data-i="' + i + '" aria-pressed="' + S.sw[i] + '">' + n + '<small>' + (S.sw[i] ? '켜짐' : '꺼짐') + '</small></button>';
+    });
+    h += '</div><p class="msg center" id="m"></p><button id="pwr" class="btn" style="width:100%" type="button">전원 올리기</button>';
+    show('배전반', h);
+    sheet.querySelectorAll('.sw').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = +b.getAttribute('data-i');
+        S.sw[i] = !S.sw[i];
+        b.setAttribute('aria-pressed', S.sw[i]);
+        b.querySelector('small').textContent = S.sw[i] ? '켜짐' : '꺼짐';
+      });
+    });
+    $('#pwr').addEventListener('click', function () {
+      if (!S.sw[0] && !S.sw[1] && S.sw[2]) {
+        S.power = true;
+        addNote('powered', '<b>전원</b> 배전반을 맞춰 단말기에 전원이 들어왔다.');
+        setTag('tag-power', '배전반 · 가동', true);
+        viewBreaker();
+      } else {
+        penalize(cfg.wrong, '합선');
+        shake('불꽃이 튀고 스위치가 튕겨 나왔다.');
+      }
+    });
+  }
+  function viewTerm() {
+    if (cfg.power && !S.power) {
+      addNote('nopower', '<b>단말기</b> 전원이 꺼져 있다. 배전반을 살펴보자.');
+      show('단말기', '<div class="crt">NO POWER<br>전원이 꺼져 있다.</div>');
+      return;
+    }
+    addNote('term', '<b>단말기</b> 영문 ' + cfg.pass.length + '글자 비밀번호를 요구한다.');
+    if (S.term) {
+      show('단말기', '<div class="crt">ACCESS GRANTED<br>출구 코드는 서가에 있다.<br>' + cfg.termMsg + '</div>');
+      return;
+    }
+    show('단말기',
+      '<form id="f" autocomplete="off"><div class="crt">PASSWORD (영문 ' + cfg.pass.length + '자)<br><input id="pw" maxlength="' + cfg.pass.length + '" autocapitalize="characters" spellcheck="false" aria-label="비밀번호"></div>' +
+      '<p class="msg" id="m"></p><button class="btn" style="width:100%" type="submit">접속</button></form>');
+    $('#f').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if ($('#pw').value.trim().toUpperCase() === cfg.pass) {
+        S.term = true;
+        addNote('rule', '<b>단말기 메시지</b> ' + cfg.termNote);
+        setTag('tag-term', '단말기 · 접속됨', true);
+        viewTerm();
+      } else {
+        penalize(cfg.wrong, '접속 거부');
+        shake('ACCESS DENIED');
+      }
+    });
+  }
+  function viewDoor() {
+    show('출구 문',
+      '<p class="dim">네 자리 코드 키패드가 달려 있다.</p><form id="f" autocomplete="off">' +
+      '<input class="codein" id="code" inputmode="numeric" maxlength="4" pattern="[0-9]*" aria-label="출구 코드">' +
+      '<p class="msg center" id="m"></p><button class="btn" style="width:100%" type="submit">문 열기</button></form>');
+    $('#code').addEventListener('input', function (e) { e.target.value = e.target.value.replace(/[^0-9]/g, ''); });
+    $('#f').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if ($('#code').value === cfg.door) { end(true); }
+      else { penalize(cfg.wrong, '틀렸습니다'); shake('잠겨 있다.'); }
+    });
+  }
+  var VIEWS = { board: viewBoard, clock: viewClock, shelf: viewShelf, safe: viewSafe, term: viewTerm, door: viewDoor, breaker: viewBreaker };
+
+  function openHot(kind) {
+    if (!S.started || S.ended) return;
+    VIEWS[kind]();
+  }
+  var room = $('#room');
+  room.addEventListener('click', function (e) {
+    var g = e.target.closest('[data-kind]');
+    if (g) openHot(g.getAttribute('data-kind'));
+  });
+  room.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var g = e.target.closest('[data-kind]');
+    if (g) { e.preventDefault(); openHot(g.getAttribute('data-kind')); }
+  });
+
+  function stage() {
+    if (!S.safe) return 0;
+    if (cfg.power) { if (!S.power) return 1; return S.term ? 3 : 2; }
+    return S.term ? 2 : 1;
+  }
+  hintBtn.addEventListener('click', function () {
+    if (!S.started || S.ended) return;
+    var st = stage(), n = S.hints[st];
+    if (n >= cfg.hints[st].length) { toast('이 단계의 힌트를 모두 썼습니다'); return; }
+    S.hints[st]++;
+    var empty = hintLog.querySelector('.empty');
+    if (empty) empty.remove();
+    var li = document.createElement('li');
+    li.innerHTML = '<b>단계 ' + (st + 1) + '</b> ' + cfg.hints[st][n];
+    hintLog.appendChild(li);
+    penalize(cfg.hintCost, '힌트');
+  });
+
+  function bestKey() { return 'escape7-best-' + selected; }
+  function best() { try { return parseInt(localStorage.getItem(bestKey()), 10) || 0; } catch (e) { return 0; } }
+  function saveBest(ms) { try { localStorage.setItem(bestKey(), String(ms)); } catch (e) {} }
+
+  function end(win) {
+    if (S.ended) return;
+    var rem = remaining();
+    S.ended = true;
+    hintBtn.disabled = true;
+    if (win) {
+      var prev = best(), isBest = rem > prev;
+      if (isBest) saveBest(rem);
+      show('탈출 성공',
+        '<p>' + cfg.name + ' 난이도 클리어. 남은 시간 <b style="font-family:var(--f-mono);color:var(--accent)">' + fmt(rem) + '</b>, 힌트 ' + S.hints.reduce(function (a, b) { return a + b; }, 0) + '번 사용.</p>' +
+        '<p class="dim">' + (isBest ? cfg.name + ' 난이도의 최고 기록입니다.' : cfg.name + ' 난이도 최고 기록 ' + fmt(prev) + ' 남김') + '</p>' +
+        '<button id="again" class="btn" style="width:100%">난이도 다시 고르기</button>', false);
+    } else {
+      var done = (S.safe ? 1 : 0) + (S.term ? 1 : 0) + (cfg.power && S.power ? 1 : 0);
+      show('시간 초과',
+        '<p>' + fmt(cfg.total) + '이 지났다. 출구는 끝내 열리지 않았다.</p><p class="dim">풀어낸 잠금 ' + done + ' / ' + cfg.locks + ' (출구 문 제외)</p>' +
+        '<button id="again" class="btn" style="width:100%">난이도 다시 고르기</button>', false);
+    }
+    $('#again').addEventListener('click', reset);
+  }
+
+  function applyMode() {
+    cfg = MODES[selected];
+    $('#wrap').classList.toggle('is-hard', selected === 'hard');
+    $('#eyebrow').textContent = '밀실 · ' + cfg.name + ' · ' + (cfg.total / 60000) + '분';
+    $('#miniClock').innerHTML = clockInner(cfg.clock);
+    hintBtn.textContent = '힌트 받기 (−' + cfg.hintCost + '초)';
+    hintLog.innerHTML = '<li class="empty">막히면 현재 단계의 힌트를 받을 수 있습니다. (단계마다 최대 2개)</li>';
+    timerEl.textContent = fmt(cfg.total);
+    timerEl.classList.remove('low');
+    barEl.style.transform = 'scaleX(1)';
+  }
+
+  function reset() {
+    clearInterval(tickId);
+    S = freshState();
+    notesEl.innerHTML = '<li class="empty">아직 찾은 단서가 없습니다.</li>';
+    setTag('tag-safe', '금고'); setTag('tag-term', '단말기'); setTag('tag-door', '출구'); setTag('tag-power', '배전반');
+    hintBtn.disabled = true;
+    applyMode();
+    intro();
+  }
+
+  function rulesHTML() {
+    return '<li>제한시간 <b>' + (cfg.total / 60000) + '분</b></li><li>오답 입력 <b>−' + cfg.wrong + '초</b></li><li>힌트 <b>−' + cfg.hintCost + '초</b> (단계마다 최대 2개)</li>';
+  }
+  function intro() {
+    var order = ['easy', 'normal', 'hard'];
+    var h = '<p>출구 문은 네 자리 코드로 잠겨 있다. 방 안의 물건에서 단서를 모아 이어 붙이면 코드를 알아낼 수 있다.</p><fieldset style="border:0;padding:0;margin:0"><legend class="dim" style="margin-bottom:8px">난이도</legend><div class="modes">';
+    order.forEach(function (k) {
+      var m = MODES[k];
+      h += '<label class="mode"><input type="radio" name="mode" value="' + k + '"' + (k === selected ? ' checked' : '') + '><span class="m-name">' + m.name + '</span><span class="m-time">' + (m.total / 60000) + '분</span><span class="m-desc">' + m.desc + '</span></label>';
+    });
+    h += '</div></fieldset><ul class="rules" id="rules">' + rulesHTML() + '</ul><button id="go" class="btn" style="width:100%">시작하기</button>';
+    show('제7관제실에 갇혔다', h, false);
+    sheet.querySelectorAll('input[name="mode"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        selected = r.value;
+        try { localStorage.setItem('escape7-mode', selected); } catch (e) {}
+        applyMode();
+        $('#rules').innerHTML = rulesHTML();
+      });
+    });
+    $('#go').addEventListener('click', function () {
+      S.started = true; S.t0 = Date.now();
+      hintBtn.disabled = false;
+      layer.hidden = true;
+      tickId = setInterval(tick, 100);
+      tick();
+    });
+  }
+
+  try {
+    var saved = localStorage.getItem('escape7-mode');
+    if (saved && MODES[saved]) selected = saved;
+  } catch (e) {}
+  S = freshState();
+  applyMode();
+  intro();
+})();
+</script>
+
+</body></html>

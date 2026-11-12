@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>대포 좀비 디펜스</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f1ece2;--ink:#2a2420;--panel:#e4dccd;--line:#bfb3a0;--btn:#2f5d50;--btnink:#f6f2ea;--gold:#9a6a00;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15121a;--ink:#ece6da;--panel:#221d2b;--line:#3a3347;--btn:#5fa58f;--btnink:#10201b;--gold:#f0c24b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15121a;--ink:#ece6da;--panel:#221d2b;--line:#3a3347;--btn:#5fa58f;--btnink:#10201b;--gold:#f0c24b;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{max-width:940px;margin:0 auto;padding:12px}
+.hud{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:1.15rem;margin-bottom:8px}
+.hud b{color:var(--gold)}
+.wrap{position:relative}
+canvas{width:100%;height:auto;display:block;border:2px solid var(--line);border-radius:6px;touch-action:none;cursor:crosshair;background:#1b1626}
+.over{position:absolute;inset:0;display:none;flex-direction:column;gap:10px;align-items:center;justify-content:center;background:rgba(10,8,14,.78);color:#f3ece0;text-align:center;font-size:1.4rem;border-radius:6px}
+.over.on{display:flex}
+.shop{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:10px}
+button{font:inherit;background:var(--btn);color:var(--btnink);border:0;border-radius:6px;padding:10px 12px;cursor:pointer;text-align:left;line-height:1.25}
+button small{display:block;opacity:.85;font-size:.85rem}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hint{margin:8px 0 0;font-size:.95rem;opacity:.8}
+</style>
+</head>
+<body>
+<main>
+<div class="hud">
+  <span>웨이브 <b id="wave">1</b></span>
+  <span>코인 <b id="gold">20</b></span>
+  <span>처치 <b id="kills">0</b></span>
+  <span>성벽 <b id="wall">100</b></span>
+</div>
+<div class="wrap">
+  <canvas id="c" width="900" height="500" aria-label="게임 화면"></canvas>
+  <div class="over" id="over"><div id="overTxt"></div><button id="again">다시 시작</button></div>
+</div>
+<div class="shop" id="shop"></div>
+<p class="hint">화면을 누르거나 드래그하면 그 위치로 포탄을 발사합니다. 체력이 낮은 좀비일수록 빠르게 달려옵니다.</p>
+</main>
+<script>
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+const W=900,H=500,WALL_X=150,CX=70,CY=395;
+const $=id=>document.getElementById(id);
+let S;
+const UP={
+  dmg:{name:'포탄 위력',base:30,max:10,txt:l=>'피해 '+(30+5*l)},
+  rate:{name:'장전 속도',base:30,max:8,txt:l=>'재장전 '+(1.1*Math.pow(.86,l)).toFixed(2)+'초'},
+  rad:{name:'폭발 범위',base:35,max:8,txt:l=>'반경 '+((76+9*l)/38).toFixed(1)+'cm'},
+  rng:{name:'사거리',base:30,max:10,txt:l=>(10+l)+'cm'},
+  coin:{name:'코인 획득',base:40,max:10,txt:l=>'처치당 +'+(5*l)+' 코인'},
+  multi:{name:'다연발',base:80,max:4,txt:l=>(1+l)+'발 동시 발사'}
+};
+const cost=k=>Math.round(UP[k].base*Math.pow(1.55,S.lv[k]));
+const stat={dmg:()=>30+5*S.lv.dmg,cd:()=>1.1*Math.pow(.86,S.lv.rate),rad:()=>76+9*S.lv.rad,n:()=>1+S.lv.multi,rng:()=>(10+S.lv.rng)*38};
+const clampT=(x,y)=>{const d=Math.hypot(x-CX,y-CY),m=stat.rng();return d>m?[CX+(x-CX)*m/d,CY+(y-CY)*m/d]:[x,y]};
+const speedFor=hp=>15+(200-hp)/100*35; // 체력 100 → 50px/s, 200 → 15px/s
+
+function reset(){
+  S={gold:20,kills:0,wave:0,wall:100,lv:{dmg:0,rate:0,rad:0,multi:0,rng:0,coin:0},z:[],sh:[],bm:[],cd:0,left:0,spawn:0,brk:1.5,aim:{x:600,y:380},down:false,t:0,dead:false,recoil:0};
+  $('over').classList.remove('on');buildShop();hud();
+}
+function buildShop(){
+  const el=$('shop');el.innerHTML='';
+  for(const k in UP){const b=document.createElement('button');b.id='b_'+k;b.onclick=()=>buy(k);el.appendChild(b)}
+  const r=document.createElement('button');r.id='b_fix';r.onclick=()=>{if(S.gold>=40&&S.wall<100){S.gold-=40;S.wall=Math.min(100,S.wall+30);hud()}};el.appendChild(r);
+}
+function buy(k){const c=cost(k);if(S.lv[k]>=UP[k].max||S.gold<c)return;S.gold-=c;S.lv[k]++;hud()}
+function hud(){
+  $('wave').textContent=Math.max(1,S.wave);$('gold').textContent=S.gold;$('kills').textContent=S.kills;$('wall').textContent=Math.ceil(S.wall);
+  for(const k in UP){const b=$('b_'+k),l=S.lv[k],mx=l>=UP[k].max;
+    b.disabled=mx||S.gold<cost(k);
+    b.innerHTML=UP[k].name+' Lv.'+l+'<small>'+UP[k].txt(l)+(mx?' (최대)':' → '+UP[k].txt(l+1)+' · '+cost(k)+'코인')+'</small>'}
+  const f=$('b_fix');f.disabled=S.gold<40||S.wall>=100;f.innerHTML='성벽 수리<small>체력 +30 · 40코인</small>';
+}
+function nextWave(){S.wave++;S.left=5+S.wave*2;S.spawn=0;hud()}
+function spawnZ(){
+  const hp=100+Math.floor(Math.random()*101);
+  S.z.push({x:W+30,y:372+Math.random()*100,hp,max:hp,sp:speedFor(hp),ph:Math.random()*6,h:36+(hp-100)/100*26});
+}
+function fire(){
+  const n=stat.n();
+  for(let i=0;i<n;i++){
+    const off=n===1?0:(i-(n-1)/2)*55;
+    const [tx,ty]=clampT(S.aim.x+off*0.4,S.aim.y+off);
+    const a=Math.atan2(ty-CY,tx-CX),mx=CX+Math.cos(a)*50,my=CY+Math.sin(a)*50;
+    S.sh.push({x:mx,y:my,tx,ty,a});
+  }
+  S.cd=stat.cd();S.recoil=1;
+}
+function boom(x,y){
+  const R=stat.rad(),d=stat.dmg();
+  S.bm.push({x,y,R,t:0});
+  for(const z of S.z){
+    if(Math.hypot(z.x-x,(z.y-z.h/2)-y)<R+14){z.hp-=d;z.hit=.12;}
+  }
+}
+function update(dt){
+  S.t+=dt;
+  if(S.dead)return;
+  S.cd-=dt;
+  if(S.down&&S.cd<=0)fire();
+  if(S.recoil>0)S.recoil=Math.max(0,S.recoil-dt*6);
+  if(S.left>0){S.spawn-=dt;if(S.spawn<=0){spawnZ();S.left--;S.spawn=Math.max(.35,1.4-S.wave*.07)*(.6+Math.random()*.8)}}
+  else if(S.z.length===0){S.brk-=dt;if(S.brk<=0){nextWave();S.brk=2.5}}
+  for(const s of S.sh){
+    const dx=s.tx-s.x,dy=s.ty-s.y,dist=Math.hypot(dx,dy),step=760*dt;
+    if(dist<=step){s.done=true;boom(s.tx,s.ty)}else{s.x+=dx/dist*step;s.y+=dy/dist*step}
+  }
+  S.sh=S.sh.filter(s=>!s.done);
+  for(const b of S.bm)b.t+=dt;
+  S.bm=S.bm.filter(b=>b.t<.35);
+  for(const z of S.z){
+    z.ph+=dt*z.sp*.09;if(z.hit>0)z.hit-=dt;
+    if(z.x>WALL_X+10)z.x-=z.sp*dt;
+    else S.wall-=6*dt;
+  }
+  for(const z of S.z)if(z.hp<=0){S.kills++;S.gold+=Math.round(z.max/20)+5*S.lv.coin}
+  const before=S.z.length;
+  S.z=S.z.filter(z=>z.hp>0);
+  if(S.z.length!==before||Math.floor(S.t*4)!==S.lastH){S.lastH=Math.floor(S.t*4);hud()}
+  if(S.wall<=0){S.wall=0;S.dead=true;hud();$('overTxt').innerHTML='성벽이 무너졌습니다<br>웨이브 '+S.wave+' · 처치 '+S.kills;$('over').classList.add('on')}
+}
+function draw(){
+  const sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#1b1626');sky.addColorStop(.7,'#4a2b3d');sky.addColorStop(1,'#6b3d3a');
+  g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.fillStyle='#f2e8c8';g.beginPath();g.arc(740,80,30,0,7);g.fill();
+  g.fillStyle='#2a1f33';g.beginPath();g.arc(752,72,28,0,7);g.fill();
+  g.fillStyle='#2b2230';g.fillRect(0,350,W,150);
+  g.fillStyle='#3a2f3a';g.fillRect(0,350,W,6);
+  g.fillStyle='#6f6a66';g.fillRect(WALL_X-24,300,26,200);
+  g.fillStyle='#5a5551';for(let y=310;y<500;y+=22)g.fillRect(WALL_X-24,y,26,3);
+  g.fillStyle='#000a';g.fillRect(WALL_X-24,288,26,6);g.fillStyle=S.wall>35?'#5fbf8f':'#e0524a';g.fillRect(WALL_X-24,288,26*S.wall/100,6);
+  const zs=[...S.z].sort((a,b)=>a.y-b.y);
+  for(const z of zs){
+    const bob=Math.sin(z.ph)*3,h=z.h,w=h*.42,top=z.y-h+bob;
+    g.fillStyle='#0006';g.beginPath();g.ellipse(z.x,z.y,w*.8,4,0,0,7);g.fill();
+    const col=z.hit>0?'#fff':`hsl(${95-(z.max-100)/100*45},38%,${40-(z.max-100)/100*10}%)`;
+    g.fillStyle='#3b3550';const lg=Math.sin(z.ph*1.6)*4;
+    g.fillRect(z.x-w*.4+lg,z.y-h*.32,w*.35,h*.32);g.fillRect(z.x+w*.05-lg,z.y-h*.32,w*.35,h*.32);
+    g.fillStyle=z.hit>0?'#fff':'#6a4a4a';g.fillRect(z.x-w/2,top+h*.3,w,h*.4);
+    g.fillStyle=col;g.fillRect(z.x-w/2-h*.32,top+h*.32+bob*.3,h*.34,h*.1);
+    g.fillStyle=col;g.beginPath();g.arc(z.x,top+h*.18,h*.17,0,7);g.fill();
+    g.fillStyle='#e23';g.fillRect(z.x-h*.1,top+h*.15,h*.05,h*.05);g.fillRect(z.x-h*.01,top+h*.15,h*.05,h*.05);
+    const bw=34;g.fillStyle='#000a';g.fillRect(z.x-bw/2,top-12,bw,5);
+    g.fillStyle='#e0524a';g.fillRect(z.x-bw/2,top-12,bw*Math.max(0,z.hp)/z.max,5);
+    g.fillStyle='#f3ece0';g.font='11px sans-serif';g.textAlign='center';g.fillText(Math.max(0,Math.ceil(z.hp)),z.x,top-16);
+  }
+  for(const s of S.sh){g.fillStyle='#ffb347';g.beginPath();g.arc(s.x-Math.cos(s.a)*10,s.y-Math.sin(s.a)*10,3,0,7);g.fill();g.fillStyle='#0b0910';g.beginPath();g.arc(s.x,s.y,6,0,7);g.fill()}
+  for(const b of S.bm){const k=b.t/.35;g.globalAlpha=1-k;g.fillStyle='#ffb347';g.beginPath();g.arc(b.x,b.y,b.R*(.4+k*.6),0,7);g.fill();g.strokeStyle='#fff3c4';g.lineWidth=3;g.stroke();g.globalAlpha=1}
+  const a=Math.atan2(S.aim.y-CY,S.aim.x-CX);
+  g.save();g.translate(CX,CY);
+  g.fillStyle='#3d2f24';g.beginPath();g.arc(0,12,26,0,7);g.fill();g.fillStyle='#241a14';g.beginPath();g.arc(0,12,10,0,7);g.fill();
+  g.rotate(a);g.translate(-S.recoil*8,0);
+  g.fillStyle='#3a3d45';g.fillRect(-14,-13,66,26);g.fillStyle='#50545f';g.fillRect(-14,-13,66,7);g.fillStyle='#24262c';g.fillRect(46,-16,10,32);
+  g.restore();
+  g.strokeStyle='#ffe9a8';g.lineWidth=1.5;g.setLineDash([5,5]);const [rx,ry]=clampT(S.aim.x,S.aim.y);g.beginPath();g.arc(rx,ry,stat.rad(),0,7);g.stroke();g.globalAlpha=.3;g.beginPath();g.arc(CX,CY,stat.rng(),-1.4,.5);g.stroke();g.globalAlpha=1;g.setLineDash([]);
+  if(S.left===0&&S.z.length===0&&!S.dead){g.fillStyle='#f3ece0';g.font='28px Jua,sans-serif';g.textAlign='center';g.fillText('웨이브 '+(S.wave+1)+' 준비!',W/2,150)}
+}
+let last=performance.now();
+function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
+function pos(e){const r=cv.getBoundingClientRect();S.aim.x=(e.clientX-r.left)*W/r.width;S.aim.y=(e.clientY-r.top)*H/r.height}
+cv.addEventListener('pointerdown',e=>{e.preventDefault();pos(e);S.down=true});
+cv.addEventListener('pointermove',pos);
+addEventListener('pointerup',()=>{S&&(S.down=false)});
+$('again').onclick=reset;
+reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
